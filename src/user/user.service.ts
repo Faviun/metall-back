@@ -6,6 +6,6 @@ export class UserService {
   constructor(private prisma: PrismaService) {}
 
   async getUsers() {
-    return this.prisma.user.findMany();
+    // return this.prisma.user.findMany();
   }
 }
