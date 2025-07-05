@@ -1,9 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as puppeteer from 'puppeteer';
+import * as XLSX from 'xlsx';
+import * as fs from 'fs';
+import * as path from 'path';
 
 type Product = {
   provider: string;
+  category: string;
   name: string;
+  size: string;
   mark: string;
   length: string;
   location: string;
@@ -15,127 +20,139 @@ type Product = {
 
 @Injectable()
 export class McParserService {
-  private readonly url = 'https://mc.ru/metalloprokat/armatura_riflenaya_a3';
   private readonly logger = new Logger(McParserService.name);
 
-  async parseArmatura() {
+  private readonly categories = [
+    {
+      url: 'https://mc.ru/metalloprokat/armatura_riflenaya_a3',
+      name: 'Арматура рифлёная А3',
+    },
+    {
+      url: 'https://mc.ru/metalloprokat/armatura_gladkaya_a1',
+      name: 'Арматура гладкая А1',
+    },
+    {
+      url: 'https://mc.ru/metalloprokat/armatura_at800',
+      name: 'Арматура А800',
+    },
+    {
+      url: 'https://mc.ru/metalloprokat/katanka',
+      name: 'Катанка',
+    },
+    {
+      url: 'https://mc.ru/metalloprokat/provoloka_torgovaya_obyknovennogo_kachestva_otozhzhenaya',
+      name: 'Проволока отожженная',
+    },
+  ];
+
+  async parseCategory(url: string, category: string): Promise<Product[]> {
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
-
-    await page.goto(this.url, { waitUntil: 'networkidle2' });
-    await page.waitForSelector('tr.parent');
-
-    const totalPages = await page.evaluate(() => {
-      const pagination = document.querySelectorAll('.pagination li a');
-      const numbers = Array.from(pagination)
-        .map((a) => parseInt(a.textContent || '', 10))
-        .filter((n) => !isNaN(n));
-      return Math.max(...numbers, 1);
-    });
-
-    this.logger.log(`Всего страниц: ${totalPages}`);
-
     const allProducts: Product[] = [];
+    const seenFirstItems = new Set<string>();
 
-   const seenFirstItems = new Set<string>();
+    for (let pageNum = 1; pageNum <= 50; pageNum++) {
+      const pageUrl = pageNum === 1 ? url : `${url}/PageN/${pageNum}`;
 
-for (let pageNum = 1; pageNum <= 50; pageNum++) {
-  const url = pageNum === 1
-    ? 'https://mc.ru/metalloprokat/armatura_riflenaya_a3'
-    : `https://mc.ru/metalloprokat/armatura_riflenaya_a3/PageN/${pageNum}`;
+      await page.goto(pageUrl, { waitUntil: 'networkidle2' });
+      try {
+        await page.waitForSelector('tr[data-nm]', { timeout: 10000 });
+      } catch {
+        this.logger.warn(`Нет данных на странице ${pageNum} категории ${category}`);
+        break;
+      }
 
-  await page.goto(url, { waitUntil: 'networkidle2' });
-  await page.waitForSelector('tr[data-nm]', { timeout: 10000 });
+      const products = await page.evaluate((category) => {
+        const rows = Array.from(document.querySelectorAll('tr[data-nm]'));
+        return rows.map((row) => {
+          const provider = 'МЕТАЛЛ СЕРВИС';
+          const name = row.getAttribute('data-nm')?.trim() || '';
+          const size = row.querySelector('td._razmer')?.textContent?.trim() || '';
+          const mark = row.querySelector('td._mark')?.textContent?.trim() || '';
+          const length = row.querySelector('td._dlina')?.textContent?.trim() || '';
+          const location = row.querySelector('td._fact')?.textContent?.trim() || '';
+          const stock = row.querySelector('td._ost')?.textContent?.replace(/\s+/g, '') || '';
+          const price = row.querySelector('meta[itemprop="price"]')?.getAttribute('content') || '';
+          const imgRelative = row.querySelector('img.Picture')?.getAttribute('src') || '';
+          const image = imgRelative ? `https://mc.ru${imgRelative}` : '';
+          const href = row.querySelector('a')?.getAttribute('href') || '';
+          const link = href ? `https://mc.ru${href}` : '';
 
-    const products = await page.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('tr[data-nm]'));
-
-      return rows.map((row) => {
-        const provider = 'МЕТАЛЛ СЕРВИС';
-        const name = row.getAttribute('data-nm')?.trim() || '';
-        const mark = row.querySelector('td._mark')?.textContent?.trim() || '';
-        const length = row.querySelector('td._dlina')?.textContent?.trim() || '';
-        const location = row.querySelector('td._fact')?.textContent?.trim() || '';
-        const stock = row.querySelector('td._ost')?.textContent?.replace(/\s+/g, '') || '';
-        const price = row.querySelector('meta[itemprop="price"]')?.getAttribute('content') || '';
-        const imgRelative = row.querySelector('img.Picture')?.getAttribute('src') || '';
-        const image = imgRelative ? `https://mc.ru${imgRelative}` : '';
-        const href = row.querySelector('a')?.getAttribute('href') || '';
-        const link = href ? `https://mc.ru${href}` : '';
-
-        return {
+          return {
             provider,
-          name,
-          mark,
-          length,
-          location,
-          stock,
-          price,
-          image,
-          link
-        };
-      });
-    });
+            category,
+            name,
+            size,
+            mark,
+            length,
+            location,
+            stock,
+            price,
+            image,
+            link,
+          };
+        });
+      }, category);
 
-    if (products.length === 0) {
-    console.log(`Страница ${pageNum} пуста, останавливаемся.`);
-    break;
-  }
+      if (products.length === 0) {
+        this.logger.log(`Страница ${pageNum} пуста, останавливаемся.`);
+        break;
+      }
 
-  if (products.length === 0) {
-    console.log(`Страница ${pageNum} пуста, завершаем.`);
-    break;
-  }
+      const firstKey = `${products[0].name}|${products[0].mark}|${products[0].length}`;
+      if (seenFirstItems.has(firstKey)) {
+        this.logger.log(`Страница ${pageNum} дублирует предыдущую, останавливаемся.`);
+        break;
+      }
 
-  const firstKey = `${products[0].name}|${products[0].mark}|${products[0].length}`;
-  if (seenFirstItems.has(firstKey)) {
-    console.log(`Страница ${pageNum} дублирует предыдущую, завершаем.`);
-    break;
-  }
-
-  seenFirstItems.add(firstKey);
-  allProducts.push(...products);
-  console.log(`✅ Страница ${pageNum}: ${products.length} товаров`);
-}
-
-    await browser.close();
-
-    const totalCount = allProducts.length;
-
-    const validProducts = allProducts.filter(
-      (p) =>
-        p.name &&
-        p.price &&
-        !isNaN(parseFloat(p.price)) 
-    );
-
-    const invalidProducts = allProducts.filter(
-      (p) =>
-        !p.name ||
-        !p.price ||
-        isNaN(parseFloat(p.price)) 
-    );
-
-    this.logger.log(`Найдено товаров: ${totalCount}`);
-    this.logger.log(`Прошли валидацию: ${validProducts.length}`);
-
-    if (validProducts.length === 0) {
-      this.logger.warn('❌ Все товары невалидны — возможно, сайт изменился.');
-      this.logger.warn('Пример невалидных данных:', invalidProducts.slice(0, 3));
-      throw new Error('Парсинг неудачен: нет валидных товаров.');
+      seenFirstItems.add(firstKey);
+      allProducts.push(...products);
+      this.logger.log(`✅ [${category}] Страница ${pageNum}: ${products.length} товаров`);
     }
 
-    if (validProducts.length < totalCount * 0.5) {
-      this.logger.warn('⚠️ Меньше половины товаров валидны — проверь структуру сайта.');
-      this.logger.warn('Первые невалидные записи:', JSON.stringify(invalidProducts.slice(0, 3), null, 2));
+    await browser.close();
+    return allProducts;
+  }
+
+  async parseAll() {
+    const allResults: Product[] = [];
+
+    for (const cat of this.categories) {
+      this.logger.log(`Начинаем парсинг категории: ${cat.name}`);
+      const products = await this.parseCategory(cat.url, cat.name);
+      const valid = products.filter((p) => p.name && p.price && !isNaN(parseFloat(p.price)));
+
+      this.logger.log(`В категории "${cat.name}" найдено товаров: ${products.length}`);
+      this.logger.log(`Прошли валидацию: ${valid.length}`);
+
+      if (valid.length === 0) {
+        this.logger.warn(`❌ Все товары невалидны в категории "${cat.name}".`);
+        continue;
+      }
+
+      allResults.push(...valid);
     }
 
     return {
-      total: totalCount,
-      valid: validProducts.length,
-      products: validProducts,
+      total: allResults.length,
+      products: allResults,
     };
   }
+
+  async exportToExcel(products: Product[], fileName = 'products.xlsx') {
+    const ws = XLSX.utils.json_to_sheet(products);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Товары');
+
+    const filePath = path.join(__dirname, '..', '..', 'exports', fileName);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    XLSX.writeFile(wb, filePath);
+
+    this.logger.log(`📁 Excel-файл сохранён: ${filePath}`);
+  }
+
+  async parseAndExport() {
+    const { products } = await this.parseAll();
+    await this.exportToExcel(products);
+  }
 }
-
-
