@@ -7,3 +7,6 @@ npx prisma init
 
 npm run start:dev
 npx ts-node scripts/sync.ts
+
+http://localhost:3000/parser-mc/armatura
+http://localhost:3000/parser-mc/download
