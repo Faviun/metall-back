@@ -8,10 +8,30 @@ import * as fs from 'fs';
 export class McParserController {
   constructor(private readonly parserService: McParserService) {}
 
-  @Get('armatura')
+  @Get('parse')
   async parseAll() {
-    return this.parserService.parseAll();
+    // return this.parserService.parseAll();
+    const { products } = await this.parserService.parseAll();
+
+  // сохраняем валидные товары в базу
+  await this.parserService.saveToDatabase(products);
+
+  // возвращаем краткую информацию
+  return {
+    message: '✅ Данные успешно спарсены и сохранены в базу',
+    total: products.length,
+  };
   }
+
+  @Get('data')
+async getSavedData() {
+  const products = await this.parserService.getFromDatabase();
+  return {
+    message: '📦 Получены данные из базы',
+    total: products.length,
+    products,
+  };
+}
 
   @Get('download')
   async downloadExcel(@Res() res: Response) {

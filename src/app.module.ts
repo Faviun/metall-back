@@ -1,14 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
-import { UserService } from './user/user.service';
-import { UserController } from './user/user.controller';
 import { McParserModule } from './parser/mc/armatura/mc-parser.module';
+import { DiposModule } from './parser/dipos/dipos.module';
 
 @Module({
-  imports: [PrismaModule, McParserModule],
-  controllers: [AppController, UserController],
-  providers: [AppService, UserService],
+  imports: [ McParserModule, DiposModule],
+  controllers: [AppController, ],
+  providers: [AppService, ],
 })
 export class AppModule {}

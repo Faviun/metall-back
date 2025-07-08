@@ -3,6 +3,8 @@ import * as puppeteer from 'puppeteer';
 import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
+import { mcCategories } from './mc-categories';
+import { PrismaClient, Parser as ParserModel } from '@prisma/client';
 
 type Product = {
   provider: string;
@@ -12,8 +14,8 @@ type Product = {
   mark: string;
   length: string;
   location: string;
-  stock: string;
-  price: string;
+  price1: string;
+  price2: string;
   image: string;
   link: string;
 };
@@ -21,29 +23,8 @@ type Product = {
 @Injectable()
 export class McParserService {
   private readonly logger = new Logger(McParserService.name);
-
-  private readonly categories = [
-    {
-      url: 'https://mc.ru/metalloprokat/armatura_riflenaya_a3',
-      name: 'Арматура рифлёная А3',
-    },
-    {
-      url: 'https://mc.ru/metalloprokat/armatura_gladkaya_a1',
-      name: 'Арматура гладкая А1',
-    },
-    {
-      url: 'https://mc.ru/metalloprokat/armatura_at800',
-      name: 'Арматура А800',
-    },
-    {
-      url: 'https://mc.ru/metalloprokat/katanka',
-      name: 'Катанка',
-    },
-    {
-      url: 'https://mc.ru/metalloprokat/provoloka_torgovaya_obyknovennogo_kachestva_otozhzhenaya',
-      name: 'Проволока отожженная',
-    },
-  ];
+  private readonly prisma = new PrismaClient();
+  private readonly categories = mcCategories;
 
   async parseCategory(url: string, category: string): Promise<Product[]> {
     const browser = await puppeteer.launch({ headless: true });
@@ -53,8 +34,8 @@ export class McParserService {
 
     for (let pageNum = 1; pageNum <= 50; pageNum++) {
       const pageUrl = pageNum === 1 ? url : `${url}/PageN/${pageNum}`;
-
       await page.goto(pageUrl, { waitUntil: 'networkidle2' });
+
       try {
         await page.waitForSelector('tr[data-nm]', { timeout: 10000 });
       } catch {
@@ -71,8 +52,8 @@ export class McParserService {
           const mark = row.querySelector('td._mark')?.textContent?.trim() || '';
           const length = row.querySelector('td._dlina')?.textContent?.trim() || '';
           const location = row.querySelector('td._fact')?.textContent?.trim() || '';
-          const stock = row.querySelector('td._ost')?.textContent?.replace(/\s+/g, '') || '';
-          const price = row.querySelector('meta[itemprop="price"]')?.getAttribute('content') || '';
+          const price1 = row.querySelector('td._ost')?.textContent?.replace(/\s+/g, '') || '';
+          const price2 = row.querySelector('meta[itemprop="price"]')?.getAttribute('content') || '';
           const imgRelative = row.querySelector('img.Picture')?.getAttribute('src') || '';
           const image = imgRelative ? `https://mc.ru${imgRelative}` : '';
           const href = row.querySelector('a')?.getAttribute('href') || '';
@@ -86,8 +67,8 @@ export class McParserService {
             mark,
             length,
             location,
-            stock,
-            price,
+            price1,
+            price2,
             image,
             link,
           };
@@ -120,7 +101,7 @@ export class McParserService {
     for (const cat of this.categories) {
       this.logger.log(`Начинаем парсинг категории: ${cat.name}`);
       const products = await this.parseCategory(cat.url, cat.name);
-      const valid = products.filter((p) => p.name && p.price && !isNaN(parseFloat(p.price)));
+      const valid = products.filter((p) => p.name && p.price1 && !isNaN(parseFloat(p.price1)));
 
       this.logger.log(`В категории "${cat.name}" найдено товаров: ${products.length}`);
       this.logger.log(`Прошли валидацию: ${valid.length}`);
@@ -139,6 +120,33 @@ export class McParserService {
     };
   }
 
+  async saveToDatabase(products: Product[]) {
+    for (const product of products) {
+      try {
+        await this.prisma.parser.upsert({
+          where: { link: product.link },
+          update: {
+            provider: product.provider,
+            category: product.category,
+            name: product.name,
+            size: product.size,
+            mark: product.mark,
+            length: product.length,
+            location: product.location,
+            price1: product.price1,
+            price2: product.price2,
+            image: product.image,
+          },
+          create: product,
+        });
+      } catch (error) {
+        this.logger.warn(`⚠️ Ошибка при сохранении товара "${product.name}": ${error.message}`);
+      }
+    }
+
+    this.logger.log(`✅ Сохранено в базу: ${products.length} товаров`);
+  }
+
   async exportToExcel(products: Product[], fileName = 'products.xlsx') {
     const ws = XLSX.utils.json_to_sheet(products);
     const wb = XLSX.utils.book_new();
@@ -151,8 +159,19 @@ export class McParserService {
     this.logger.log(`📁 Excel-файл сохранён: ${filePath}`);
   }
 
+  async parseAndSave() {
+    const { products } = await this.parseAll();
+    await this.saveToDatabase(products);
+  }
+
   async parseAndExport() {
     const { products } = await this.parseAll();
     await this.exportToExcel(products);
   }
+
+  async getFromDatabase() {
+  return this.prisma.parser.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+}
 }

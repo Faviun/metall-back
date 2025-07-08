@@ -13,6 +13,25 @@ model User {
   name  String
 }
 
+model Parser {
+  id          Int     @id @default(autoincrement())
+  provider    String
+  category    String
+  description String?
+  name        String
+  size        String?
+  mark        String?
+  length      String?
+  location    String?
+  price1      String?
+  price2      String?
+  image       String?
+  link        String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model MetalProduct {
   id           Int     @id @default(autoincrement())
   name         String

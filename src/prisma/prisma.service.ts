@@ -1,15 +1,22 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
+import { PrismaClient, Parser as ProductEntity } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 @Injectable()
-export class PrismaService extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy {
-  
-  async onModuleInit() {
-    await this.$connect();
-  }
-
-  async onModuleDestroy() {
-    await this.$disconnect();
+export class ProductService {
+  async saveMany(products: ProductEntity[]) {
+    for (const parser of products) {
+      try {
+        if (!parser.link) return;
+        await prisma.parser.upsert({
+          where: { link: parser.link }, 
+          update: parser,
+          create: parser,
+        });
+      } catch (e) {
+        console.error(`Ошибка при сохранении товара ${parser.name}`, e);
+      }
+    }
   }
 }
