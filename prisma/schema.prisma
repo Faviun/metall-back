@@ -14,7 +14,7 @@ model User {
 }
 
 model Parser {
-  id          Int     @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   provider    String
   category    String
   description String?
@@ -24,9 +24,12 @@ model Parser {
   length      String?
   location    String?
   price1      String?
+  units1      String?
   price2      String?
+  units2      String?
+  available   Boolean?
   image       String?
-  link        String? @unique
+  link        String?  @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

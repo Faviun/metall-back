@@ -9,37 +9,37 @@ export class McParserController {
   constructor(private readonly parserService: McParserService) {}
 
   @Get('parse')
-  async parseAll() {
+    async parseAll() {
     // return this.parserService.parseAll();
     const { products } = await this.parserService.parseAll();
 
-  // сохраняем валидные товары в базу
-  await this.parserService.saveToDatabase(products);
+    // сохраняем валидные товары в базу
+    await this.parserService.saveToDatabase(products);
 
-  // возвращаем краткую информацию
-  return {
-    message: '✅ Данные успешно спарсены и сохранены в базу',
-    total: products.length,
-  };
+    // возвращаем краткую информацию
+    return {
+      message: '✅ Данные успешно спарсены и сохранены в базу',
+      total: products.length,
+    };
   }
 
   @Get('data')
-async getSavedData() {
-  const products = await this.parserService.getFromDatabase();
-  return {
-    message: '📦 Получены данные из базы',
-    total: products.length,
-    products,
-  };
-}
+    async getSavedData() {
+    const products = await this.parserService.getFromDatabase();
+    return {
+      message: '📦 Получены данные из базы',
+      total: products.length,
+      products,
+    };
+  }
 
   @Get('download')
-  async downloadExcel(@Res() res: Response) {
+    async downloadExcel(@Res() res: Response) {
     const fileName = 'products.xlsx';
 
     // 1. Запустить парсинг и экспорт
-    const { products } = await this.parserService.parseAll();
-    await this.parserService.exportToExcel(products, fileName);
+    // const { products } = await this.parserService.parseAll();
+    await this.parserService.exportToExcelFromDb(fileName);
 
     // 2. Получить путь к файлу
     const filePath = path.join(__dirname, '..', '..', 'exports', fileName);
