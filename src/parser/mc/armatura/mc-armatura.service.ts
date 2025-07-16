@@ -191,6 +191,9 @@ export class McParserService {
   async exportToExcelFromDb(fileName = 'products.xlsx') {
   // 1. Получаем все записи из базы
   const products = await this.prisma.parser.findMany({
+    where: {
+    location: 'Москва', // ошибка: нельзя фильтровать по null, если поле non-null
+  },
     orderBy: { createdAt: 'desc' },
   });
 
