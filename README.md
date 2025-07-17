@@ -9,7 +9,10 @@ npm run start:dev
 npx ts-node scripts/sync.ts
 
 API/parser-mc/parse - Парсит сайт https://mc.ru/
+
 API/parser-mc/data - Выводит спарсенные данные в браузере
+
 API/parser-mc/download - Скачивает excel таблицу с товарами
+
 
 API/pdf/manual - Выводит данные из pdf в excel
