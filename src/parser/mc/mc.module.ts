@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { McParserService } from './mc-armatura.service';
-import { McParserController } from './mc-armatura.controller';
+import { McParserService } from './mc.service';
+import { McParserController } from './mc.controller';
 
 @Module({
   controllers: [McParserController],

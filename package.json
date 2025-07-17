@@ -31,7 +31,7 @@
     "googleapis": "^152.0.0",
     "multer": "^2.0.1",
     "pdf-parse": "^1.1.1",
-    "puppeteer": "^24.11.1",
+    "puppeteer": "^24.14.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "xlsx": "^0.18.5"

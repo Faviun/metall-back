@@ -1,12 +1,12 @@
 import { Controller, Get, Res } from '@nestjs/common';
-import { McParserService } from './mc-armatura.service';
+import { MetallotorgParserService } from './metallotorg.service';
 import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 
-@Controller('parser-mc')
-export class McParserController {
-  constructor(private readonly parserService: McParserService) {}
+@Controller('metallotorg-parser')
+export class MetallotorgParserController {
+  constructor(private readonly parserService: MetallotorgParserService) {}
 
   @Get('parse')
     async parseAll() {
