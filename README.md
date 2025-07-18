@@ -8,23 +8,16 @@ npx prisma init
 npm run start:dev
 npx ts-node scripts/sync.ts
 
----
+---  
+**Металл Сервис**  
+API/parser-mc/parse - Парсит сайт https://mc.ru/  
+API/parser-mc/data - Выводит спарсенные данные в виду JSON  
+API/parser-mc/download - Скачивает excel таблицу с товарами  
 
-API/parser-mc/parse - Парсит сайт https://mc.ru/
-
-API/parser-mc/data - Выводит спарсенные данные в виду JSON
-
-API/parser-mc/download - Скачивает excel таблицу с товарами
-
-
-***
-
-**Metallotorg**
-
-API/metallotorg-parser/parse
-
-API/metallotorg-parser/data?page=1&limit=100 - Выводит спарсенные данные в виду JSON  
-
+---  
+**Metallotorg**  
+API/parser-metallotorg/parse - Парсит сайт https://www.metallotorg.ru/  
+API/parser-metallotorg/data?page=1&limit=100 - Выводит спарсенные данные в виду JSON  
 ```ts
 products": [  
     {  
@@ -47,7 +40,6 @@ products": [
     },  
 ]
 ```
-
-
-
+API/parser-metallotorg/download - Скачивает excel таблицу с товарами  
+---  
 API/pdf/manual - Выводит данные из pdf в excel
