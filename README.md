@@ -24,6 +24,8 @@ API/parser-mc/download - Скачивает excel таблицу с товара
 API/metallotorg-parser/parse
 
 API/metallotorg-parser/data?page=1&limit=100 - Выводит спарсенные данные в виду JSON  
+
+```ts
 products": [  
     {  
       "id": 5384,  
