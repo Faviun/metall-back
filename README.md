@@ -21,25 +21,26 @@ API/parser-metallotorg/data?page=1&limit=100 - Выводит спарсенны
 ```ts
 products": [  
     {  
-      "id": 5384,  
+      "id": 5218,  
       "provider": "metallotorg",  
-      "category": "Арматура гладкая A1",  
-      "name": "Арматура гладкая А240С(А1) 20мм.",  
-      "size": "20мм.",  
-      "length": "(11,7м)_Ст3",  
-      "mark": "ГОСТ 34028-2016",  
-      "weight": "29.472",  
+      "category": "Шестигранник",  
+      "name": "Шестигранник сталь 35 12",  
+      "size": "12",  
+      "length": "",  
+      "mark": "",  
+      "weight": "4.201",  
       "units1": "Цена 1 - 5 т.",  
-      "price1": "Цену уточняйте",  
+      "price1": "94200 руб.",  
       "units2": "Цена от 5 т. до 15 т.",  
-      "price2": "Цену уточняйте",  
+      "price2": "94100 руб.",  
       "units3": "Цена \u003E 15 т.",  
-      "price3": "Цену уточняйте",  
-      "location": "Лобня (Москва)",  
-      "link": "https://metallotorg.ru/info/metallobaza/lobnya/v-r/armatura-gladkaya-a240sa1/rzm-20mm-/dl-11-7m_st3/"  
-    },  
+      "price3": "94000 руб.",  
+      "location": "Электроугли (Москва)",  
+      "link": "https://metallotorg.ru/info/metallobaza/elektrougli/shestigrannik/shestigrannik-st35/rzm-12/vs-4-201/"  
+    }, 
 ]
-```
-API/parser-metallotorg/download - Скачивает excel таблицу с товарами  
+```  
+API/parser-metallotorg/download - Скачивает excel таблицу с товарами Metalltorg  
+
 ---  
 API/pdf/manual - Выводит данные из pdf в excel
