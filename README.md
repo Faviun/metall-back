@@ -45,7 +45,7 @@ products": [
       "location": "Лобня (Москва)",  
       "link": "https://metallotorg.ru/info/metallobaza/lobnya/v-r/armatura-gladkaya-a240sa1/rzm-20mm-/dl-11-7m_st3/"  
     },  
-
+]```
 
 
 
