@@ -8,6 +8,11 @@ npx prisma init
 npm run start:dev
 npx ts-node scripts/sync.ts
 
+---
+.env
+```DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19fMDFLd2tLY2FPdkxOTzVRRENNOVEiLCJhcGlfa2V5IjoiMDFLMDU0VDBYNE5SUlJSSkNZUEg5RDFBRTQiLCJ0ZW5hbnRfaWQiOiIzNmQzNjlhYjQ2YTgzNjYwNzQxNDEwZGZhMmEzMDI5MzMzN2YwMDc5MjM2ZjYwMjNjNmQwNDNmN2NhNmFkZTA5IiwiaW50ZXJuYWxfc2VjcmV0IjoiMGJiNGYyMzEtZGQ1NC00MzhiLTg4NDgtN2U4ZTQ3MDg0YTJlIn0.7XrS0p-H2B8vlT8SROh-lBzHd46oUhIZIJ7tYnOMmeg"```
+---
+
 ---  
 **Металл Сервис**  
 API/parser-mc/parse - Парсит сайт https://mc.ru/  
