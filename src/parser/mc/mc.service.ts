@@ -191,9 +191,6 @@ export class McParserService {
   async exportToExcelFromDb(fileName = 'products.xlsx') {
   // 1. Получаем все записи из базы
   const products = await this.prisma.parser.findMany({
-    where: {
-    location: 'Москва', // ошибка: нельзя фильтровать по null, если поле non-null
-  },
     orderBy: { createdAt: 'desc' },
   });
 
@@ -224,9 +221,43 @@ export class McParserService {
   await this.exportToExcelFromDb(); // берёт из базы, не парсит заново
 }
 
-  async getFromDatabase() {
+
+  async getFromDatabase(pagination?: { skip?: number; take?: number }) {
     return this.prisma.parser.findMany({
-      orderBy: { createdAt: 'desc' },
+      where: {
+        provider: 'МЕТАЛЛ СЕРВИС',
+      },
+      select: {
+        id: true,
+        provider: true,
+        category: true,
+        name: true,
+        size: true,
+        length: true,
+        mark: true,
+        weight: true,
+        units1: true,
+        price1: true,
+        units2: true,
+        price2: true,
+        units3: true,
+        price3: true,
+        location: true,
+        link: true,
+        image: true,
+        available: true,
+    },
+      skip: pagination?.skip,
+      take: pagination?.take,
+      orderBy: { id: 'desc' },
+    });
+  }
+
+  async countProducts() {
+  return this.prisma.parser.count({
+    where: {
+      provider: 'МЕТАЛЛ СЕРВИС',
+      },
     });
   }
 }

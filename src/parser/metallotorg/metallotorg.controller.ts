@@ -1,34 +1,42 @@
-import { Controller, Get, Res } from '@nestjs/common';
+import { Controller, Get, Query, Res } from '@nestjs/common';
 import { MetallotorgParserService } from './metallotorg.service';
 import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 
-@Controller('metallotorg-parser')
+@Controller('parser-metallotorg')
 export class MetallotorgParserController {
   constructor(private readonly parserService: MetallotorgParserService) {}
 
   @Get('parse')
-    async parseAll() {
-    // return this.parserService.parseAll();
-    const { products } = await this.parserService.parseAll();
+    async parseAndSave() {
+    await this.parserService.parseCategory();
 
-    // сохраняем валидные товары в базу
-    await this.parserService.saveToDatabase(products);
-
-    // возвращаем краткую информацию
     return {
-      message: '✅ Данные успешно спарсены и сохранены в базу',
-      total: products.length,
+      message: '✅ Парсинг завершён, данные сохранены в базу по мере обработки.',
     };
   }
 
   @Get('data')
-    async getSavedData() {
-    const products = await this.parserService.getFromDatabase();
+    async getSavedData(
+      @Query('page') page = 1,
+      @Query('limit') limit = 100,
+    ) {
+    
+    const pageNum = Math.max(1, Number(page));
+    const take = Math.min(Number(limit), 100); // ограничим максимум 100 товаров за раз
+    const skip = (pageNum - 1) * take;
+
+    const [products, total] = await Promise.all([
+    this.parserService.getFromDatabase({ skip, take }),
+    this.parserService.countProducts(),
+  ]);
+
     return {
       message: '📦 Получены данные из базы',
-      total: products.length,
+      totalProduct: products.length,
+      total,
+      perPage: take,
       products,
     };
   }
@@ -37,14 +45,9 @@ export class MetallotorgParserController {
     async downloadExcel(@Res() res: Response) {
     const fileName = 'products.xlsx';
 
-    // 1. Запустить парсинг и экспорт
-    // const { products } = await this.parserService.parseAll();
     await this.parserService.exportToExcelFromDb(fileName);
-
-    // 2. Получить путь к файлу
     const filePath = path.join(__dirname, '..', '..', 'exports', fileName);
 
-    // 3. Проверить наличие и отправить
     if (!fs.existsSync(filePath)) {
       return res.status(404).send('Файл не найден');
     }

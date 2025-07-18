@@ -32,7 +32,7 @@ export class MetallotorgParserService {
   private readonly prisma = new PrismaClient();
   private readonly categories = metallotorgCategories;
 
-  async parseCategory(): Promise<Product[]> {
+  async parseCategory(): Promise<void> {
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
 
@@ -43,85 +43,99 @@ export class MetallotorgParserService {
     'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
   });
 
-  const allProducts: Product[] = [];
+  let emptyPagesInRow = 0;
+  const maxEmptyPages = 3;
 
-  for (let pageNum = 1; pageNum <= 1000; pageNum++) {
-    const pageUrl = `https://www.metallotorg.ru/info/pricelists/moscow/${pageNum}`;
-    await page.goto(pageUrl, { waitUntil: 'domcontentloaded' });
+for (let pageNum = 1; pageNum <= 1000; pageNum++) {
+  let success = false;
+  let attempt = 0;
+  const maxAttempts = 3;
 
-    const hasTable = await page.$('table tbody tr');
-    if (!hasTable) {
-      this.logger.log(`❌ Таблица не найдена на странице ${pageNum}, прерываем.`);
-      break;
+  while (!success && attempt < maxAttempts) {
+    attempt++;
+    try {
+      const pageUrl = `https://www.metallotorg.ru/info/pricelists/moscow/${pageNum}`;
+      await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+
+      const hasTable = await page.$('table tbody tr');
+      if (!hasTable) {
+        this.logger.log(`❌ Таблица не найдена на странице ${pageNum}, прерываем.`);
+        emptyPagesInRow++;
+        success = true;
+        break;
+      }
+
+        const products: Product[] = await page.evaluate((categories): Product[] => {
+          const rows = Array.from(document.querySelectorAll('table tbody tr'));
+          return rows
+            .filter(row => row.querySelectorAll('td').length >= 10)
+            .map(row => {
+              const cells = row.querySelectorAll('td');
+              const nameLink = cells[0].querySelector('a');
+              const href = nameLink?.getAttribute('href') || '';
+              const name = nameLink?.textContent?.trim() || '';
+
+              let category = '';
+              for (const item of categories) {
+                if (name.toLowerCase().trim().includes(item.name.toLowerCase().trim())) {
+                  category = item.category;
+                  break;
+                }
+              }
+
+              return {
+                provider: 'metallotorg',
+                category,
+                name,
+                size: cells[1]?.textContent?.trim() || '',
+                length: cells[2]?.textContent?.trim() || '',
+                mark: cells[3]?.textContent?.trim() || '',
+                weight: cells[4]?.textContent?.trim() || '',
+                price1: cells[6]?.textContent?.trim() || '',
+                price2: cells[7]?.textContent?.trim() || '',
+                price3: cells[8]?.textContent?.trim() || '',
+                units1: 'Цена 1 - 5 т.',
+                units2: 'Цена от 5 т. до 15 т.',
+                units3: 'Цена > 15 т.',
+                location: cells[9]?.textContent?.trim() || '',
+                link: href ? `https://metallotorg.ru${href}` : '',
+              };
+            });
+        }, this.categories);
+
+        if (!products || products.length === 0) {
+        this.logger.log(`Страница ${pageNum} пуста или невалидна, завершаем.`);
+        emptyPagesInRow++;
+        success = true;
+        break;
+      } else {
+        emptyPagesInRow = 0; // сбрасываем, если были данные
+      }
+
+      const valid = products.filter(p => p.name && p.location);
+      await this.saveToDatabase(valid);
+      this.logger.log(`✅ Страница ${pageNum}: ${valid.length} товаров сохранено`);
+      success = true;
+    } catch (error) {
+      this.logger.warn(`⚠️ Ошибка на странице ${pageNum} (попытка ${attempt}): ${error.message}`);
+      if (attempt < maxAttempts) {
+        this.logger.log(`⏳ Ждём 3 секунды перед повтором...`);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      } else {
+        this.logger.error(`❌ Превышено число попыток для страницы ${pageNum}, переходим к следующей.`);
+        success = true;
+      }
     }
-
-    const products: Product[] = await page.evaluate((categories): Product[] => {
-      const rows = Array.from(document.querySelectorAll('table tbody tr'));
-      return rows
-        .filter(row => row.querySelectorAll('td').length >= 10)
-        .map(row => {
-          const cells = row.querySelectorAll('td');
-          const nameLink = cells[0].querySelector('a');
-          const href = nameLink?.getAttribute('href') || '';
-          const name = nameLink?.textContent?.trim() || '';
-
-          let category = '';
-          for (const item of categories) {
-            if (name.toLowerCase().trim().includes(item.name.toLowerCase().trim())) {
-              category = item.category;
-              break;
-            }
-          }
-          
-          return {
-            provider: 'metallotorg',
-            category,
-            name,
-            size: cells[1]?.textContent?.trim() || '',
-            length: cells[2]?.textContent?.trim() || '',
-            mark: cells[3]?.textContent?.trim() || '',
-            weight: cells[4]?.textContent?.trim() || '',
-            price1: cells[6]?.textContent?.trim() || '',
-            price2: cells[7]?.textContent?.trim() || '',
-            price3: cells[8]?.textContent?.trim() || '',
-            units1: 'Цена 1 - 5 т.',
-            units2: 'Цена от 5 т. до 15 т.',
-            units3: 'Цена > 15 т.',
-            location: cells[9]?.textContent?.trim() || '',
-            link: href ? `https://metallotorg.ru${href}` : '',
-          };
-        });
-    }, this.categories);
-
-    if (!products || products.length === 0) {
-      this.logger.log(`Страница ${pageNum} пуста или невалидна, завершаем.`);
-      break;
-    }
-
-    allProducts.push(...products);
-    this.logger.log(`✅Страница ${pageNum}: ${products.length} товаров`);
   }
 
-  await browser.close();
-  return allProducts;
+  if (emptyPagesInRow >= maxEmptyPages) {
+    this.logger.warn(`📉 Обнаружено ${maxEmptyPages} пустых страниц подряд. Парсинг остановлен.`);
+    break;
+  }
 }
 
-  async parseAll() {
-    const allResults: Product[] = [];
-
-      const products = await this.parseCategory();
-      const valid = products.filter((p) => p.name && p.location);
-
-      this.logger.log(`Прошли валидацию: ${valid.length}`);
-
-      allResults.push(...valid);
-    
-
-    return {
-      total: allResults.length,
-      products: allResults,
-    };
-  }
+  await browser.close();
+}
 
   async saveToDatabase(products: Product[]) {
     for (const product of products) {
@@ -173,15 +187,15 @@ export class MetallotorgParserService {
 }
 
   async parseAndSave() {
-    const { products } = await this.parseAll();
-    await this.saveToDatabase(products);
+    await this.parseCategory();
+    this.logger.log('✅ Парсинг завершён и данные сохранены.');
   }
 
   async parseAndExport() {
   await this.exportToExcelFromDb(); // берёт из базы, не парсит заново
 }
 
-  async getFromDatabase() {
+  async getFromDatabase(pagination?: { skip?: number; take?: number }) {
     return this.prisma.parser.findMany({
       where: {
         provider: 'metallotorg',
@@ -204,7 +218,17 @@ export class MetallotorgParserService {
         location: true,
         link: true,
     },
+      skip: pagination?.skip,
+      take: pagination?.take,
       orderBy: { id: 'desc' },
+    });
+  }
+
+  async countProducts() {
+  return this.prisma.parser.count({
+    where: {
+      provider: 'metallotorg',
+      },
     });
   }
 }
