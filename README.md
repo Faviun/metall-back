@@ -11,12 +11,15 @@ npx ts-node scripts/sync.ts
 ```js
 DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19fMDFLd2tLY2FPdkxOTzVRRENNOVEiLCJhcGlfa2V5IjoiMDFLMDU0VDBYNE5SUlJSSkNZUEg5RDFBRTQiLCJ0ZW5hbnRfaWQiOiIzNmQzNjlhYjQ2YTgzNjYwNzQxNDEwZGZhMmEzMDI5MzMzN2YwMDc5MjM2ZjYwMjNjNmQwNDNmN2NhNmFkZTA5IiwiaW50ZXJuYWxfc2VjcmV0IjoiMGJiNGYyMzEtZGQ1NC00MzhiLTg4NDgtN2U4ZTQ3MDg0YTJlIn0.7XrS0p-H2B8vlT8SROh-lBzHd46oUhIZIJ7tYnOMmeg"
 ```
----
 
 ---  
 **Металл Сервис**  
+
 API/parser-mc/parse - Парсит сайт https://mc.ru/  
-API/parser-mc/data?page=1&limit=10 - Выводит спарсенные данные в виде JSON
+
+API/parser-mc/download - Скачивает excel таблицу с товарами  
+
+API/parser-mc/data?page=1&limit=10 - Выводит спарсенные данные в виде JSON  
 ```ts  
 "products": [  
     {  
@@ -41,12 +44,15 @@ API/parser-mc/data?page=1&limit=10 - Выводит спарсенные дан�
     },
 ]  
 ```  
-API/parser-mc/download - Скачивает excel таблицу с товарами  
-
 ---  
 **Metallotorg**  
+
 API/parser-metallotorg/parse - Парсит сайт https://www.metallotorg.ru/  
+
+API/parser-metallotorg/download - Скачивает excel таблицу с товарами Metalltorg  
+
 API/parser-metallotorg/data?page=1&limit=100 - Выводит спарсенные данные в виде JSON  
+
 ```ts
 products": [  
     {  
@@ -67,9 +73,8 @@ products": [
       "location": "Электроугли (Москва)",  
       "link": "https://metallotorg.ru/info/metallobaza/elektrougli/shestigrannik/shestigrannik-st35/rzm-12/vs-4-201/"  
     }, 
-]
+]  
 ```  
-API/parser-metallotorg/download - Скачивает excel таблицу с товарами Metalltorg  
 
 ---  
 API/pdf/manual - Выводит данные из pdf в excel
