@@ -16,13 +16,37 @@ DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJI
 ---  
 **Металл Сервис**  
 API/parser-mc/parse - Парсит сайт https://mc.ru/  
-API/parser-mc/data - Выводит спарсенные данные в виду JSON  
+API/parser-mc/data?page=1&limit=10 - Выводит спарсенные данные в виде JSON
+```ts  
+"products": [  
+    {  
+      "id": 8251,  
+      "provider": "МЕТАЛЛ СЕРВИС",  
+      "category": "Дуплексная сталь",  
+      "name": "Лист нержавеющий DUPLEX 50х1500х6000 \u003Cbr\u003E2507 (S32750)",  
+      "size": "50",  
+      "length": "No1",  
+      "mark": "2507 (S32750)",  
+      "weight": null,  
+      "units1": "Цена, руб до 0,1т",  
+      "price1": "639423",  
+      "units2": "Цена, руб от 0,1 до 1т",  
+      "price2": "639423",  
+      "units3": null,  
+      "price3": null,  
+      "location": "Москва",  
+      "link": "https://mc.ru/metalloprokat/list_nerzhaveyushiy_duplex_50x1500x6000_2507_(s32750)_razmer_50_marka_2507_(s32750)_dlina_no1",  
+      "image": "https://mc.ru/img/prodpict/gal/mini/stal_listovaya_duplex.jpg",  
+      "available": true,  
+    },
+]  
+```  
 API/parser-mc/download - Скачивает excel таблицу с товарами  
 
 ---  
 **Metallotorg**  
 API/parser-metallotorg/parse - Парсит сайт https://www.metallotorg.ru/  
-API/parser-metallotorg/data?page=1&limit=100 - Выводит спарсенные данные в виду JSON  
+API/parser-metallotorg/data?page=1&limit=100 - Выводит спарсенные данные в виде JSON  
 ```ts
 products": [  
     {  
