@@ -199,6 +199,18 @@ for (let pageNum = 1; pageNum <= 1000; pageNum++) {
     return this.prisma.parser.findMany({
       where: {
         provider: 'metallotorg',
+        OR: [
+          {
+            createdAt: {
+              gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            },
+          },
+          {
+            updatedAt: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+        },
+      },
+    ],
       },
       select: {
         id: true,
@@ -217,6 +229,9 @@ for (let pageNum = 1; pageNum <= 1000; pageNum++) {
         price3: true,
         location: true,
         link: true,
+        createdAt: true,
+        updatedAt: true,
+
     },
       skip: pagination?.skip,
       take: pagination?.take,
