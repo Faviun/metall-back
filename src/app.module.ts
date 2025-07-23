@@ -6,10 +6,11 @@ import { DiposModule } from './parser/dipos/dipos.module';
 import { PdfParserModule } from './parser/pdf/pdf-parser.module';
 import { MetallotorgModule } from './parser/metallotorg/metallotorg.module';
 import { KtzParserModule } from './parser/ktzholding/ktzholding.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [ McParserModule, MetallotorgModule, DiposModule, KtzParserModule, PdfParserModule],
+  imports: [ McParserModule, MetallotorgModule, DiposModule, KtzParserModule, PdfParserModule, PrismaModule],
   controllers: [AppController, ],
-  providers: [AppService, ],
+  providers: [AppService ],
 })
 export class AppModule {}

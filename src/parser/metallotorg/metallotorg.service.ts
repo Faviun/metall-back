@@ -1,249 +1,159 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as puppeteer from 'puppeteer';
-import * as XLSX from 'xlsx';
-import * as fs from 'fs';
-import * as path from 'path';
 import { metallotorgCategories } from './metallotorg-categories';
-import { PrismaClient } from '@prisma/client';
-
-type Product = {
-  provider: string;
-  category: string;
-  name: string;
-  size: string;
-  mark: string;
-  length: string;
-  weight: string;
-  location: string;
-  price1: string;
-  price2?: string;
-  price3?: string;
-  units1: string | null;
-  units2?: string | null;
-  units3: string | null;
-  available?: boolean;
-  image?: string;
-  link: string;
-};
+import { SaveProductsService } from 'src/database/save-products.service';
+import { Product } from 'src/types/product.type';
+import { ExportExcelProductsService } from 'src/database/export-excel.service';
 
 @Injectable()
 export class MetallotorgParserService {
   private readonly logger = new Logger(MetallotorgParserService.name);
-  private readonly prisma = new PrismaClient();
   private readonly categories = metallotorgCategories;
 
-  async parseCategory(): Promise<void> {
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
+  constructor(
+    private readonly saveProducts: SaveProductsService,
+    private readonly exportService: ExportExcelProductsService,
+  ) {}
 
-  await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
-  );
-  await page.setExtraHTTPHeaders({
-    'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
-  });
+  // Запуск браузера и подготовка страницы
+  private async launchBrowser(): Promise<{ browser: puppeteer.Browser; page: puppeteer.Page }> {
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
 
-  let emptyPagesInRow = 0;
-  const maxEmptyPages = 3;
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+    );
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
+    });
 
-for (let pageNum = 1; pageNum <= 1000; pageNum++) {
-  let success = false;
-  let attempt = 0;
-  const maxAttempts = 3;
+    return { browser, page };
+  }
 
-  while (!success && attempt < maxAttempts) {
-    attempt++;
-    try {
-      const pageUrl = `https://www.metallotorg.ru/info/pricelists/moscow/${pageNum}`;
-      await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  // Парсинг одной страницы с товарами
+  private async parsePage(page: puppeteer.Page, pageNum: number): Promise<Product[]> {
+    const url = `https://www.metallotorg.ru/info/pricelists/moscow/${pageNum}`;
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
-      const hasTable = await page.$('table tbody tr');
-      if (!hasTable) {
-        this.logger.log(`❌ Таблица не найдена на странице ${pageNum}, прерываем.`);
-        emptyPagesInRow++;
-        success = true;
-        break;
-      }
-
-        const products: Product[] = await page.evaluate((categories): Product[] => {
-          const rows = Array.from(document.querySelectorAll('table tbody tr'));
-          return rows
-            .filter(row => row.querySelectorAll('td').length >= 10)
-            .map(row => {
-              const cells = row.querySelectorAll('td');
-              const nameLink = cells[0].querySelector('a');
-              const href = nameLink?.getAttribute('href') || '';
-              const name = nameLink?.textContent?.trim() || '';
-
-              let category = '';
-              for (const item of categories) {
-                if (name.toLowerCase().trim().includes(item.name.toLowerCase().trim())) {
-                  category = item.category;
-                  break;
-                }
-              }
-
-              return {
-                provider: 'metallotorg',
-                category,
-                name,
-                size: cells[1]?.textContent?.trim() || '',
-                length: cells[2]?.textContent?.trim() || '',
-                mark: cells[3]?.textContent?.trim() || '',
-                weight: cells[4]?.textContent?.trim() || '',
-                price1: cells[6]?.textContent?.trim() || '',
-                price2: cells[7]?.textContent?.trim() || '',
-                price3: cells[8]?.textContent?.trim() || '',
-                units1: 'Цена 1 - 5 т.',
-                units2: 'Цена от 5 т. до 15 т.',
-                units3: 'Цена > 15 т.',
-                location: cells[9]?.textContent?.trim() || '',
-                link: href ? `https://metallotorg.ru${href}` : '',
-              };
-            });
-        }, this.categories);
-
-        if (!products || products.length === 0) {
-        this.logger.log(`Страница ${pageNum} пуста или невалидна, завершаем.`);
-        emptyPagesInRow++;
-        success = true;
-        break;
-      } else {
-        emptyPagesInRow = 0; // сбрасываем, если были данные
-      }
-
-      const valid = products.filter(p => p.name && p.location);
-      await this.saveToDatabase(valid);
-      this.logger.log(`✅ Страница ${pageNum}: ${valid.length} товаров сохранено`);
-      success = true;
-    } catch (error) {
-      this.logger.warn(`⚠️ Ошибка на странице ${pageNum} (попытка ${attempt}): ${error.message}`);
-      if (attempt < maxAttempts) {
-        this.logger.log(`⏳ Ждём 3 секунды перед повтором...`);
-        await new Promise(resolve => setTimeout(resolve, 3000));
-      } else {
-        this.logger.error(`❌ Превышено число попыток для страницы ${pageNum}, переходим к следующей.`);
-        success = true;
-      }
+    const hasTable = await page.$('table tbody tr');
+    if (!hasTable) {
+      this.logger.log(`❌ Таблица не найдена на странице ${pageNum}`);
+      return [];
     }
-  }
 
-  if (emptyPagesInRow >= maxEmptyPages) {
-    this.logger.warn(`📉 Обнаружено ${maxEmptyPages} пустых страниц подряд. Парсинг остановлен.`);
-    break;
-  }
-}
+    const products: Product[] = await page.evaluate((categories) => {
+      const rows = Array.from(document.querySelectorAll('table tbody tr'));
+      return rows
+        .filter(row => row.querySelectorAll('td').length >= 10)
+        .map(row => {
+          const cells = row.querySelectorAll('td');
+          const nameLink = cells[0].querySelector('a');
+          const href = nameLink?.getAttribute('href') || '';
+          const name = nameLink?.textContent?.trim() || '';
 
-  await browser.close();
-}
+          let category = '';
+          for (const item of categories) {
+            if (name.toLowerCase().includes(item.name.toLowerCase())) {
+              category = item.category;
+              break;
+            }
+          }
 
-  async saveToDatabase(products: Product[]) {
-    for (const product of products) {
-      try {
-        await this.prisma.parser.upsert({
-          where: { link: product.link },
-          update: {
-            provider: product.provider,
-            category: product.category,
-            name: product.name,
-            size: product.size,
-            mark: product.mark,
-            length: product.length,
-            location: product.location,
-            price1: product.price1,
-            price2: product.price2,
-            image: product.image,
-          },
-          create: product,
+          return {
+            provider: 'metallotorg',
+            category,
+            name,
+            size: cells[1]?.textContent?.trim() || '',
+            length: cells[2]?.textContent?.trim() || '',
+            mark: cells[3]?.textContent?.trim() || '',
+            weight: cells[4]?.textContent?.trim() || '',
+            price1: cells[6]?.textContent?.trim() || '',
+            price2: cells[7]?.textContent?.trim() || '',
+            price3: cells[8]?.textContent?.trim() || '',
+            units1: 'Цена 1 - 5 т.',
+            units2: 'Цена от 5 т. до 15 т.',
+            units3: 'Цена > 15 т.',
+            location: cells[9]?.textContent?.trim() || '',
+            link: href ? `https://metallotorg.ru${href}` : '',
+            image: null,
+            available: null,
+          };
         });
+    }, this.categories);
+
+    return products;
+  }
+
+  // Фильтрация валидных товаров
+  private filterValid(products: Product[]): Product[] {
+    return products.filter(p =>
+      p.name &&
+      (
+        (p.price1 && !isNaN(parseFloat(p.price1))) ||
+        (p.price2 && !isNaN(parseFloat(p.price2))) ||
+        (p.price3 && !isNaN(parseFloat(p.price3)))
+      )
+    );
+  }
+
+  // Универсальная функция для повторных попыток с задержкой
+  private async retry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 3000): Promise<T> {
+    let lastError: any;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await fn();
       } catch (error) {
-        this.logger.warn(`⚠️ Ошибка при сохранении товара "${product.name}": ${error.message}`);
+        lastError = error;
+        this.logger.warn(`Попытка ${i + 1} не удалась: ${error.message}`);
+        if (i < attempts - 1) {
+          this.logger.log(`Ждём ${delayMs} мс перед повтором...`);
+          await new Promise(r => setTimeout(r, delayMs));
+        }
+      }
+    }
+    throw lastError;
+  }
+
+  // Основной метод парсинга всех страниц
+  async parseCategory(): Promise<void> {
+    const { browser, page } = await this.launchBrowser();
+    let emptyPagesInRow = 0;
+    const maxEmptyPages = 3;
+
+    for (let pageNum = 1; pageNum <= 1000; pageNum++) {
+      try {
+        const products = await this.retry(() => this.parsePage(page, pageNum));
+        if (!products.length) {
+          emptyPagesInRow++;
+          this.logger.log(`Пустая страница ${pageNum} (${emptyPagesInRow} подряд)`);
+
+          if (emptyPagesInRow >= maxEmptyPages) {
+            this.logger.warn(`Обнаружено ${maxEmptyPages} пустых страниц подряд. Парсинг остановлен.`);
+            break;
+          }
+          continue;
+        }
+
+        emptyPagesInRow = 0;
+
+        const valid = this.filterValid(products);
+        await this.saveToDatabase(valid);
+
+        this.logger.log(`✅ Страница ${pageNum}: сохранено ${valid.length} товаров`);
+      } catch (error) {
+        this.logger.error(`Ошибка при парсинге страницы ${pageNum}: ${error.message}`);
       }
     }
 
-    this.logger.log(`✅ Сохранено в базу: ${products.length} товаров`);
+    await browser.close();
   }
 
-  async exportToExcelFromDb(fileName = 'products.xlsx') {
-  // 1. Получаем все записи из базы
-  const products = await this.getFromDatabase()
-
-  if (products.length === 0) {
-    this.logger.warn('❌ Нет данных в базе для экспорта.');
-    return;
+  async saveToDatabase(products: Product[]): Promise<void> {
+    await this.saveProducts.saveMany(products);
   }
 
-  // 2. Преобразуем в формат Excel
-  const ws = XLSX.utils.json_to_sheet(products);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Товары');
-
-  // 3. Сохраняем файл
-  const filePath = path.join(__dirname, '..', '..', 'exports', fileName);
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  XLSX.writeFile(wb, filePath);
-
-  this.logger.log(`📁 Excel-файл из базы сохранён: ${filePath}`);
-}
-
-  async parseAndSave() {
-    await this.parseCategory();
-    this.logger.log('✅ Парсинг завершён и данные сохранены.');
-  }
-
-  async parseAndExport() {
-  await this.exportToExcelFromDb(); // берёт из базы, не парсит заново
-}
-
-  async getFromDatabase(pagination?: { skip?: number; take?: number }) {
-    return this.prisma.parser.findMany({
-      where: {
-        provider: 'metallotorg',
-        OR: [
-          {
-            createdAt: {
-              gte: new Date(new Date().setHours(0, 0, 0, 0)),
-            },
-          },
-          {
-            updatedAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-        },
-      },
-    ],
-      },
-      select: {
-        id: true,
-        provider: true,
-        category: true,
-        name: true,
-        size: true,
-        length: true,
-        mark: true,
-        weight: true,
-        units1: true,
-        price1: true,
-        units2: true,
-        price2: true,
-        units3: true,
-        price3: true,
-        location: true,
-        link: true,
-        createdAt: true,
-        updatedAt: true,
-
-    },
-      skip: pagination?.skip,
-      take: pagination?.take,
-      orderBy: { id: 'desc' },
-    });
-  }
-
-  async countProducts() {
-  return this.prisma.parser.count({
-    where: {
-      provider: 'metallotorg',
-      },
-    });
+  // Экспорт в Excel — делегируем ExportExcelProductsService
+  async exportToExcelFromDb(fileName = 'metallotorg.xlsx', provider = 'metallotorg'): Promise<void> {
+    await this.exportService.exportToExcelFromDb(fileName, provider);
   }
 }
