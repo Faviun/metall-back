@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ExcelService } from './dipos.service';
-import { ExcelController } from './dipos.controller';
+import { DiposParserController } from './dipos.controller';
+import { DiposParserService } from './dipos.service';
 
 @Module({
-  controllers: [ExcelController],
-  providers: [ExcelService],
+  controllers: [DiposParserController],
+  providers: [DiposParserService],
 })
-export class DiposModule {}
+export class DiposParserModule {}

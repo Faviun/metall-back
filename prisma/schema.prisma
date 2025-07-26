@@ -7,11 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id    Int    @id @default(autoincrement())
-  email String @unique
-  name  String
-}
+// model User {
+//   id    Int    @id @default(autoincrement())
+//   email String @unique
+//   name  String
+// }
 
 model Parser {
   id          Int      @id @default(autoincrement())
@@ -38,106 +38,106 @@ model Parser {
   updatedAt DateTime @updatedAt
 }
 
-model MetalProduct {
-  id           Int     @id @default(autoincrement())
-  name         String
-  description  String?
-  category     String
-  material     String
-  grade        String?
-  standard     String?
-  surface      String?
-  coating      String?
-  shape        String
-  length       Float?
-  width        Float?
-  height       Float?
-  diameter     Float?
-  thickness    Float?
-  weight       Float?
-  unit         String
-  quantity     Int
-  pricePerUnit Float?
-  supplierId   Int?
-  warehouseId  Int?
+// model MetalProduct {
+//   id           Int     @id @default(autoincrement())
+//   name         String
+//   description  String?
+//   category     String
+//   material     String
+//   grade        String?
+//   standard     String?
+//   surface      String?
+//   coating      String?
+//   shape        String
+//   length       Float?
+//   width        Float?
+//   height       Float?
+//   diameter     Float?
+//   thickness    Float?
+//   weight       Float?
+//   unit         String
+//   quantity     Int
+//   pricePerUnit Float?
+//   supplierId   Int?
+//   warehouseId  Int?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
 
-  supplier  Supplier?  @relation(fields: [supplierId], references: [id])
-  warehouse Warehouse? @relation(fields: [warehouseId], references: [id])
+//   supplier  Supplier?  @relation(fields: [supplierId], references: [id])
+//   warehouse Warehouse? @relation(fields: [warehouseId], references: [id])
 
-  priceHistory   PriceHistory[]
-  images         ProductImage[]
-  stockMovements StockMovement[]
-}
+//   priceHistory   PriceHistory[]
+//   images         ProductImage[]
+//   stockMovements StockMovement[]
+// }
 
-model Supplier {
-  id            Int     @id @default(autoincrement())
-  name          String
-  contactPerson String?
-  phone         String?
-  email         String?
-  address       String?
+// model Supplier {
+//   id            Int     @id @default(autoincrement())
+//   name          String
+//   contactPerson String?
+//   phone         String?
+//   email         String?
+//   address       String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
 
-  products MetalProduct[]
-}
+//   products MetalProduct[]
+// }
 
-model Warehouse {
-  id       Int     @id @default(autoincrement())
-  name     String
-  location String
-  manager  String?
-  phone    String?
+// model Warehouse {
+//   id       Int     @id @default(autoincrement())
+//   name     String
+//   location String
+//   manager  String?
+//   phone    String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
 
-  products      MetalProduct[]
-  movementsFrom StockMovement[] @relation("FromWarehouse")
-  movementsTo   StockMovement[] @relation("ToWarehouse")
-}
+//   products      MetalProduct[]
+//   movementsFrom StockMovement[] @relation("FromWarehouse")
+//   movementsTo   StockMovement[] @relation("ToWarehouse")
+// }
 
-model PriceHistory {
-  id            Int      @id @default(autoincrement())
-  productId     Int
-  price         Float
-  effectiveFrom DateTime
+// model PriceHistory {
+//   id            Int      @id @default(autoincrement())
+//   productId     Int
+//   price         Float
+//   effectiveFrom DateTime
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
 
-  product MetalProduct @relation(fields: [productId], references: [id])
-}
+//   product MetalProduct @relation(fields: [productId], references: [id])
+// }
 
-model ProductImage {
-  id          Int     @id @default(autoincrement())
-  productId   Int
-  url         String
-  description String?
+// model ProductImage {
+//   id          Int     @id @default(autoincrement())
+//   productId   Int
+//   url         String
+//   description String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
 
-  product MetalProduct @relation(fields: [productId], references: [id])
-}
+//   product MetalProduct @relation(fields: [productId], references: [id])
+// }
 
-model StockMovement {
-  id              Int      @id @default(autoincrement())
-  productId       Int
-  fromWarehouseId Int?
-  toWarehouseId   Int?
-  quantity        Int
-  movedAt         DateTime @default(now())
-  comment         String?
+// model StockMovement {
+//   id              Int      @id @default(autoincrement())
+//   productId       Int
+//   fromWarehouseId Int?
+//   toWarehouseId   Int?
+//   quantity        Int
+//   movedAt         DateTime @default(now())
+//   comment         String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
 
-  product       MetalProduct @relation(fields: [productId], references: [id])
-  fromWarehouse Warehouse?   @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
-  toWarehouse   Warehouse?   @relation("ToWarehouse", fields: [toWarehouseId], references: [id])
-}
+//   product       MetalProduct @relation(fields: [productId], references: [id])
+//   fromWarehouse Warehouse?   @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
+//   toWarehouse   Warehouse?   @relation("ToWarehouse", fields: [toWarehouseId], references: [id])
+// }
