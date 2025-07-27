@@ -16,4 +16,5 @@ export type Product = {
   available: boolean | null;
   image: string | null;
   link: string | null;
+  description?: string | null;
 };

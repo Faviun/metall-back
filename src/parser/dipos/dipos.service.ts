@@ -1,15 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { is } from 'cheerio/dist/commonjs/api/traversing';
 import * as fs from 'fs';
 import * as path from 'path';
+import { ExportExcelProductsService } from 'src/database/export-excel.service';
+import { SaveProductsService } from 'src/database/save-products.service';
+import { Product } from 'src/types/product.type';
 import * as XLSX from 'xlsx';
+import { diposCategories } from './dipos-categories';
 
 @Injectable()
 export class DiposParserService {
   private readonly logger = new Logger(DiposParserService.name);
   private readonly baseUrl = 'https://dipos.ru';
+  private readonly provider = 'dipos';
+  private readonly categories = diposCategories;
+
+  constructor(
+      private readonly saveProducts: SaveProductsService,
+      private readonly exportService: ExportExcelProductsService,
+    ) {}
 
   async fetchAndDownloadPriceList(): Promise<void> {
     try {
@@ -53,62 +63,89 @@ export class DiposParserService {
   }
 
 
-async parseDownloadedFile(): Promise<
-  { name: string; mark?: string; units1?: string; price1?: string; category?: string }[]
-> {
+async parseDownloadedFile(): Promise<void | Product[]> {
   const filePath = path.resolve(__dirname, '..', '..', 'downloads', 'price.xls');
 
-  if (!fs.existsSync(filePath)) {
-    this.logger.error('Файл не найден: ' + filePath);
+  try {
+    if (!fs.existsSync(filePath)) {
+      this.logger.error('Файл не найден: ' + filePath);
+      return [];
+    }
+
+    this.logger.log('Чтение Excel-файла...');
+
+    const workbook = XLSX.readFile(filePath);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    const rows: any[][] = XLSX.utils.sheet_to_json(sheet, {
+      header: 1,
+      defval: '',
+      raw: false,
+    });
+
+
+
+    const result: Product[] = [];
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+
+      if (!row || row.length === 0 || row.every((cell) => !cell || cell.toString().trim() === '')) {
+        continue;
+      }
+
+      const name = row[0]?.toString().trim() || '';
+      const mark = row[1]?.toString().trim() || '';
+      const units1 = row[2]?.toString().trim() || '';
+      const price1 = row[3]?.toString().replace(',', '.').trim() || '';
+
+      if (name && !isNaN(parseFloat(price1))) {
+        const foundCategory = this.categories.find((cat) => name.includes(cat)) || 'Другое';
+
+        result.push({
+          provider: this.provider,
+          category: foundCategory,
+          name,
+          mark,
+          price1,
+          units1,
+          size: null,
+          location: null,
+          weight: null,
+          image: null,
+          link: '',
+          description: '',
+          length: null,
+          price2: '',
+          units2: '',
+          price3: '',
+          units3: '',
+          available: true,
+        });
+      }
+    }
+
+    this.logger.log(`Всего строк: ${rows.length}`);
+    this.logger.log(`Отфильтровано строк: ${result.length}`);
+
+    await this.saveToDatabase(result);
+    this.logger.log(`✅ Сохранено: ${result.length} шт. из прайс-листа`);
+
+  } catch (error) {
+    this.logger.error(`❌ Ошибка парсинга: ${error.message}`);
     return [];
   }
+}
 
-  this.logger.log('Чтение Excel-файла...');
-
-  const workbook = XLSX.readFile(filePath);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-
-  // Читаем как массив массивов — без заголовков
-  const rows: any[][] = XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    defval: '',
-    raw: false,
-  });
-
-  // Массив категорий для поиска в name
-  const categories = ['Арматура', 'Швеллер', 'Труба', 'Лист']; // Добавь свои категории
-
-  const result: { name: string; mark?: string; units1?: string; price1?: string; category?: string }[] = [];
-
-  // Пропускаем первую строку (заголовки), начинаем с i = 1
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-
-    if (!row || row.length === 0 || row.every((cell) => !cell || cell.toString().trim() === '')) {
-      continue; // Пропускаем пустые строки
-    }
-
-    const name = row[0]?.toString().trim() || '';
-    const mark = row[1]?.toString().trim() || '';
-    const units1 = row[2]?.toString().trim() || '';
-    const price1 = row[3]?.toString().replace(',', '.').trim() || ''
-
-    if (name && isNaN(parseFloat(price1)) === false) {
-      // Находим первую категорию, которая встречается в name
-      const foundCategory = categories.find(cat => name.includes(cat));
-
-      result.push({
-        category: foundCategory || undefined,
-        name,
-        mark,
-        price1,
-        units1,
-      });
+private async saveToDatabase(products: Product[]): Promise<void> {
+    try {
+      await this.saveProducts.saveMany(products);
+    } catch (err) {
+      this.logger.error(`❌ Ошибка при сохранении данных: ${err.message}`);
     }
   }
 
-  this.logger.log(`Всего строк: ${rows.length}`);
-  this.logger.log(`Отфильтровано строк: ${result.length}`);
-  return result;
-}
+  async exportToExcelFromDb(fileName = 'ktzholding.xlsx', provider = this.provider): Promise<void> {
+    await this.exportService.exportToExcelFromDb(fileName, provider);
+  }
 }

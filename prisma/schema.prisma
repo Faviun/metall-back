@@ -32,10 +32,12 @@ model Parser {
   units3      String?
   available   Boolean?
   image       String?
-  link        String?  @unique
+  link        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([link])
 }
 
 // model MetalProduct {
