@@ -4,6 +4,7 @@ import { metallotorgCategories } from './metallotorg-categories';
 import { SaveProductsService } from 'src/database/save-products.service';
 import { Product } from 'src/types/product.type';
 import { ExportExcelProductsService } from 'src/database/export-excel.service';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class MetallotorgParserService {
@@ -14,6 +15,12 @@ export class MetallotorgParserService {
     private readonly saveProducts: SaveProductsService,
     private readonly exportService: ExportExcelProductsService,
   ) {}
+
+  @Cron('16,20 18 * * *', { timeZone: 'Europe/Moscow' })
+  async handleCron() {
+    this.logger.log('⏰ Запуск парсера metallotorg.ru по расписанию...');
+    await this.parseCategory();
+  }
 
   // Запуск браузера и подготовка страницы
   private async launchBrowser(): Promise<{ browser: puppeteer.Browser; page: puppeteer.Page }> {

@@ -8,6 +8,7 @@ import { SaveProductsService } from 'src/database/save-products.service';
 import { Product } from 'src/types/product.type';
 import * as XLSX from 'xlsx';
 import { diposCategories } from './dipos-categories';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class DiposParserService {
@@ -17,9 +18,22 @@ export class DiposParserService {
   private readonly categories = diposCategories;
 
   constructor(
-      private readonly saveProducts: SaveProductsService,
-      private readonly exportService: ExportExcelProductsService,
-    ) {}
+    private readonly saveProducts: SaveProductsService,
+    private readonly exportService: ExportExcelProductsService,
+  ) {}
+
+  @Cron('18,23 18 * * *', { timeZone: 'Europe/Moscow' })
+  async parse() {
+    try {
+      this.logger.log('⏰ [DiposParser] Запуск парсинга по расписанию...');
+      await this.fetchAndDownloadPriceList();
+
+      const data = (await this.parseDownloadedFile()) || [];
+      this.logger.log(`✅ [DiposParser] Завершено. Сохранено ${data.length} товаров.`);
+    } catch (error) {
+      this.logger.error(`❌ [DiposParser] Ошибка при парсинге: ${error.message}`);
+    }
+  }
 
   async fetchAndDownloadPriceList(): Promise<void> {
     try {
@@ -62,82 +76,82 @@ export class DiposParserService {
     }
   }
 
+  async parseDownloadedFile(): Promise<void | Product[]> {
+    const filePath = path.resolve(__dirname, '..', '..', 'downloads', 'price.xls');
 
-async parseDownloadedFile(): Promise<void | Product[]> {
-  const filePath = path.resolve(__dirname, '..', '..', 'downloads', 'price.xls');
+    try {
+      if (!fs.existsSync(filePath)) {
+        this.logger.error('Файл не найден: ' + filePath);
+        return [];
+      }
 
-  try {
-    if (!fs.existsSync(filePath)) {
-      this.logger.error('Файл не найден: ' + filePath);
+      this.logger.log('Чтение Excel-файла...');
+
+      const workbook = XLSX.readFile(filePath);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, {
+        header: 1,
+        defval: '',
+        raw: false,
+      });
+
+      const result: Product[] = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+
+        if (
+          !row ||
+          row.length === 0 ||
+          row.every((cell) => !cell || cell.toString().trim() === '')
+        ) {
+          continue;
+        }
+
+        const name = row[0]?.toString().trim() || '';
+        const mark = row[1]?.toString().trim() || '';
+        const units1 = row[2]?.toString().trim() || '';
+        const price1 = row[3]?.toString().replace(',', '.').trim() || '';
+
+        if (name && !isNaN(parseFloat(price1))) {
+          const foundCategory = this.categories.find((cat) => name.includes(cat)) || 'Другое';
+
+          result.push({
+            provider: this.provider,
+            category: foundCategory,
+            name,
+            mark,
+            price1,
+            units1,
+            size: null,
+            location: null,
+            weight: null,
+            image: null,
+            link: '',
+            description: '',
+            length: null,
+            price2: '',
+            units2: '',
+            price3: '',
+            units3: '',
+            available: true,
+          });
+        }
+      }
+
+      this.logger.log(`Всего строк: ${rows.length}`);
+      this.logger.log(`Отфильтровано строк: ${result.length}`);
+
+      await this.saveToDatabase(result);
+      this.logger.log(`✅ Сохранено: ${result.length} шт. из прайс-листа`);
+    } catch (error) {
+      this.logger.error(`❌ Ошибка парсинга: ${error.message}`);
       return [];
     }
-
-    this.logger.log('Чтение Excel-файла...');
-
-    const workbook = XLSX.readFile(filePath);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-
-    const rows: any[][] = XLSX.utils.sheet_to_json(sheet, {
-      header: 1,
-      defval: '',
-      raw: false,
-    });
-
-
-
-    const result: Product[] = [];
-
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-
-      if (!row || row.length === 0 || row.every((cell) => !cell || cell.toString().trim() === '')) {
-        continue;
-      }
-
-      const name = row[0]?.toString().trim() || '';
-      const mark = row[1]?.toString().trim() || '';
-      const units1 = row[2]?.toString().trim() || '';
-      const price1 = row[3]?.toString().replace(',', '.').trim() || '';
-
-      if (name && !isNaN(parseFloat(price1))) {
-        const foundCategory = this.categories.find((cat) => name.includes(cat)) || 'Другое';
-
-        result.push({
-          provider: this.provider,
-          category: foundCategory,
-          name,
-          mark,
-          price1,
-          units1,
-          size: null,
-          location: null,
-          weight: null,
-          image: null,
-          link: '',
-          description: '',
-          length: null,
-          price2: '',
-          units2: '',
-          price3: '',
-          units3: '',
-          available: true,
-        });
-      }
-    }
-
-    this.logger.log(`Всего строк: ${rows.length}`);
-    this.logger.log(`Отфильтровано строк: ${result.length}`);
-
-    await this.saveToDatabase(result);
-    this.logger.log(`✅ Сохранено: ${result.length} шт. из прайс-листа`);
-
-  } catch (error) {
-    this.logger.error(`❌ Ошибка парсинга: ${error.message}`);
-    return [];
   }
-}
 
-private async saveToDatabase(products: Product[]): Promise<void> {
+  private async saveToDatabase(products: Product[]): Promise<void> {
     try {
       await this.saveProducts.saveMany(products);
     } catch (err) {

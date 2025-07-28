@@ -7,6 +7,11 @@ import { GetProductsService } from 'src/database/get-products.service';
 
 @Module({
   controllers: [DiposParserController],
-  providers: [DiposParserService, GetProductsService, SaveProductsService, ExportExcelProductsService],
+  providers: [
+    DiposParserService,
+    GetProductsService,
+    SaveProductsService,
+    ExportExcelProductsService,
+  ],
 })
 export class DiposParserModule {}

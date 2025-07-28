@@ -360,10 +360,6 @@ export const mcCategories = [
       name: 'Профнастил оцинкованный',
     },
     {
-      url: 'https://mc.ru/metalloprokat/profnastil_nerzhavejka/Page200/',
-      name: 'Профнастил нержавеющий',
-    },
-    {
       url: 'https://mc.ru/metalloprokat/profnastil_okrashennyj/Page200/',
       name: 'Профнастил окрашенный',
     },

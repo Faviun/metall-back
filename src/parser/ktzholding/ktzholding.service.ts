@@ -4,10 +4,11 @@ import { ctzCategories } from './ktzholding-categories';
 import { SaveProductsService } from 'src/database/save-products.service';
 import { Product } from 'src/types/product.type';
 import { ExportExcelProductsService } from 'src/database/export-excel.service';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
-export class ParserService {
-  private readonly logger = new Logger(ParserService.name);
+export class ktzholdingParserService {
+  private readonly logger = new Logger(ktzholdingParserService.name);
   private readonly categories = ctzCategories;
   private readonly provider = 'ktzholding';
   private readonly allowedWarehouses = ['Дмитров', 'Ивантеевка'];
@@ -16,6 +17,13 @@ export class ParserService {
     private readonly saveProducts: SaveProductsService,
     private readonly exportService: ExportExcelProductsService,
   ) {}
+
+  @Cron('50 18 * * *', { timeZone: 'Europe/Moscow' })
+  async handleCron() {
+    this.logger.log('⏰ Запуск парсера metallotorg.ru по расписанию...');
+    await this.fetchAllProducts();
+  }
+
 
   async fetchAllProducts(): Promise<void> {
     for (const category of this.categories) {

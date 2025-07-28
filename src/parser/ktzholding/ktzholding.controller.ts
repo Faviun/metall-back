@@ -1,18 +1,18 @@
 import { Controller, Get, Query, Res, Logger } from '@nestjs/common';
-import { ParserService } from './ktzholding.service';
+import { ktzholdingParserService } from './ktzholding.service';
 import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 import { GetProductsService } from 'src/database/get-products.service';
 
 @Controller('parser-ktzholding')
-export class ParserController {
-  private readonly logger = new Logger(ParserController.name);
+export class ktzholdingParserController {
+  private readonly logger = new Logger(ktzholdingParserController.name);
   private readonly MAX_LIMIT = 100;
   private readonly PROVIDER_NAME = 'ktzholding';
   
     constructor(
-      private readonly parserService: ParserService,
+      private readonly parserService: ktzholdingParserService,
       private readonly productsDb: GetProductsService,
     ) {}
   
