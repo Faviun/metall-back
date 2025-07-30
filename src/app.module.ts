@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Get, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { McParserModule } from './parser/mc/mc.module';
@@ -9,19 +9,21 @@ import { PrismaModule } from './prisma/prisma.module';
 import { DiposParserModule } from './parser/dipos/dipos.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BrokinvestParserModule } from './parser/brokinvest/brokinvest.module';
+import { GetProductsService } from './database/get-products.service';
+import { DeleteProductsService } from './database/delete-products.service';
 
 @Module({
-  imports: [ 
-    McParserModule, 
-    MetallotorgModule, 
-    KtzParserModule, 
-    PdfParserModule, 
-    PrismaModule, 
-    DiposParserModule, 
-    BrokinvestParserModule, 
-    ScheduleModule.forRoot()
+  imports: [
+    McParserModule,
+    MetallotorgModule,
+    KtzParserModule,
+    PdfParserModule,
+    PrismaModule,
+    DiposParserModule,
+    BrokinvestParserModule,
+    ScheduleModule.forRoot(),
   ],
-  controllers: [AppController, ],
-  providers: [AppService ],
+  controllers: [AppController],
+  providers: [AppService, GetProductsService, DeleteProductsService],
 })
 export class AppModule {}

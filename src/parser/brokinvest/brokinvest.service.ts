@@ -9,7 +9,6 @@ import { Product } from 'src/types/product.type';
 export class BrokinvestParserService {
   private readonly logger = new Logger(BrokinvestParserService.name);
   private readonly BASE_URL = 'https://back.brokinvest.ru/api/v1/catalog/export/items';
-  private readonly PAGE_SIZE = 100; // если нужно
   private readonly provider = 'brokinvest';
 
   constructor(
@@ -31,18 +30,41 @@ export class BrokinvestParserService {
   //   }
 
   async fetchAllProducts(): Promise<void> {
-    for (let pageNum = 1; pageNum <= 664; pageNum++) {
+    let pageNum = 1;
+    let totalSaved = 0;
+
+    while (true) {
       try {
         const raw = await this.fetchCategoryProducts(pageNum);
 
-        const products = this.mapProducts(raw, 'Общая категория', 'all');
+        if (!raw.length) {
+          this.logger.log(`🛑 Парсинг завершён. Страница ${pageNum} пуста.`);
+          break;
+        }
 
-        await this.saveToDatabase(products);
-        this.logger.log(`✅ Сохранено: ${products.length} шт. со страницы №: ${pageNum}`);
+        const products = this.mapProducts(raw)
+          // ✅ фильтруем товары без цены или категорий
+          .filter(
+            (p) =>
+              p.price1 && !isNaN(Number(p.price1)) && Number(p.price1) > 0 && p.category !== '',
+          );
+
+        if (products.length === 0) {
+          this.logger.warn(`⚠️ Страница ${pageNum} — все товары без цены или категории.`);
+        } else {
+          await this.saveToDatabase(products);
+          this.logger.log(`✅ Сохранено: ${products.length} шт. со страницы №: ${pageNum}`);
+          totalSaved += products.length;
+        }
+
+        pageNum++;
       } catch (error) {
         this.logger.error(`❌ Ошибка парсинга страницы ${pageNum}: ${error.message}`);
+        break; // можно продолжать или выйти — зависит от задачи
       }
     }
+
+    this.logger.log(`🏁 Всего сохранено товаров: ${totalSaved}`);
   }
 
   private async fetchCategoryProducts(pageNum: number): Promise<any[]> {
@@ -53,20 +75,22 @@ export class BrokinvestParserService {
     return res.data?.data || [];
   }
 
-  private mapProducts(products: any[], categoryRu: string, categoryEn: string): Product[] {
+  private mapProducts(products: any[]): Product[] {
     return products.map((p) => {
       return {
         provider: this.provider,
-        category: p.admin_category?.admin_sub_categories?.title || 'Другое',
-        name: p.title,
-        size: p.size || '12',
+        category: p.admin_sub_categories?.[0]?.title || '',
+        name: p.title || '',
+        size: p.size || '',
         mark: p.gost,
         weight: String(p.width),
-        location: '',
+        location: String(p.stockId), // 5 - СК Октябрьский 24 - Воронеж
         price1: String(p.price),
         units1: p.unit,
-        image: p.image ? `https://back.brokinvest.ru/api/v1/files/>${p.files?.file}` : null,
-        link: `https://www.brokinvest.ru/product/${p.staticPath}`,
+        image: p.files?.[0]?.file
+          ? `https://back.brokinvest.ru/api/v1/files/${p.files?.[0]?.file}`
+          : '',
+        link: p.staticPath ? `https://www.brokinvest.ru/product/${p.staticPath}` : '',
         description: '',
         length: String(p.height),
         price2: '',
