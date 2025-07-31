@@ -4,7 +4,9 @@ import { BrokinvestParserService } from './brokinvest.service';
 import { GetProductsService } from 'src/database/get-products.service';
 import * as path from 'path';
 import * as fs from 'fs';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Парсер Brokinvest')
 @Controller('parser-brokinvest')
 export class BrokinvestParserController {
   private readonly logger = new Logger(BrokinvestParserController.name);
@@ -24,12 +26,60 @@ export class BrokinvestParserController {
   }
 
   @Get('parse')
+  @ApiOperation({ summary: 'Запустить парсер Brokinvest' })
+  @ApiResponse({ status: 200, description: 'Парсинг успешно завершён' })
   async runParser() {
     await this.service.fetchAllProducts();
     return { message: '✅ Парсинг завершён' };
   }
 
   @Get('data')
+  @ApiOperation({ summary: 'Получить сохранённые товары из базы' })
+  @ApiQuery({ name: 'page', required: false, example: '1', description: 'Номер страницы' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    example: '100',
+    description: 'Количество товаров на странице',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Пример успешного ответа',
+    schema: {
+      example: {
+        message: '📦 Получены данные из базы',
+        provider: 'brokinvest',
+        total: 800,
+        perPage: 100,
+        products: [
+          {
+            id: 26525,
+            provider: 'brokinvest',
+            category: 'Балка',
+            name: 'Балка 30К1х12000 ГОСТ 35087; 27772 С355 ТМ ',
+            size: '',
+            length: '12000',
+            mark: 'ГОСТ 35087; 27772',
+            weight: '0',
+            units1: 'т',
+            price1: '96400',
+            units2: '',
+            price2: '',
+            units3: '',
+            price3: '',
+            location: '5',
+            link: 'https://www.brokinvest.ru/product/balka-30k1x12000-gost-35087-27772-s355-tm',
+            createdAt: '2025-07-31T06:16:40.732Z',
+            updatedAt: '2025-07-31T06:16:40.732Z',
+            available: true,
+            image:
+              'https://back.brokinvest.ru/api/v1/files/catalog/2845e973-5b37-482c-8ef3-8471a7ad0963.jpg',
+          },
+        ],
+      },
+    },
+  })
+  @ApiResponse({ status: 500, description: 'Ошибка при получении данных' })
   async getSavedData(@Query('page') page = '1', @Query('limit') limit = '100') {
     try {
       const { skip, take } = this.normalizePagination(page, limit);
@@ -42,7 +92,6 @@ export class BrokinvestParserController {
       return {
         message: '📦 Получены данные из базы',
         provider: this.PROVIDER_NAME,
-        totalProduct: products.length,
         total,
         perPage: take,
         products,
@@ -56,6 +105,10 @@ export class BrokinvestParserController {
   }
 
   @Get('download')
+  @ApiOperation({ summary: 'Скачать Excel-файл с товарами Brokinvest' })
+  @ApiResponse({ status: 200, description: 'Файл Excel успешно сгенерирован и отправлен' })
+  @ApiResponse({ status: 404, description: 'Файл не найден' })
+  @ApiResponse({ status: 500, description: 'Ошибка при формировании файла' })
   async downloadExcel(@Res() res: Response) {
     const provider = this.PROVIDER_NAME;
     const fileName = `${provider}.xlsx`;
