@@ -2,7 +2,9 @@ import { Controller, Delete, Get, Logger, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 import { GetProductsService } from './database/get-products.service';
 import { DeleteProductsService } from './database/delete-products.service';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Управление данными')
 @Controller()
 export class AppController {
   constructor(
@@ -22,11 +24,48 @@ export class AppController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Приветственное сообщение' })
+  @ApiResponse({ status: 200, description: 'Возвращает приветственное сообщение' })
   getHello(): string {
     return this.appService.getHello();
   }
 
   @Get('data')
+  @ApiOperation({ summary: 'Получить сохранённые данные из базы' })
+  @ApiQuery({ name: 'page', required: false, example: '1', description: 'Номер страницы' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    example: '100',
+    description: 'Количество элементов на странице',
+  })
+  @ApiQuery({
+    name: 'provider',
+    required: false,
+    example: 'brokinvest,mc,dipos',
+    description: 'Имя провайдера или список через запятую',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Успешно получены данные',
+    schema: {
+      example: {
+        message: '📦 Получены данные из базы',
+        provider: ['mc', 'dipos'],
+        total: 5000,
+        perPage: 100,
+        products: [
+          {
+            title: 'Арматура A500C',
+            price: 45000,
+            unit: 'тн',
+            link: 'https://example.com/product/1',
+          },
+        ],
+      },
+    },
+  })
+  @ApiResponse({ status: 500, description: 'Ошибка при получении данных' })
   async getSavedData(
     @Query('page') page = '1',
     @Query('limit') limit = '100',
@@ -50,7 +89,6 @@ export class AppController {
       return {
         message: '📦 Получены данные из базы',
         provider: providerList || 'Все',
-        totalProduct: products.length,
         total,
         perPage: take,
         products,
@@ -64,6 +102,32 @@ export class AppController {
   }
 
   @Delete('data')
+  @ApiOperation({ summary: 'Удалить данные по провайдеру и возрасту' })
+  @ApiQuery({
+    name: 'provider',
+    required: false,
+    example: 'mc',
+    description: 'Провайдер, чьи данные нужно удалить',
+  })
+  @ApiQuery({
+    name: 'days',
+    required: false,
+    example: '30',
+    description: 'Удалять только те данные, которые старше N дней',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Удаление завершено',
+    schema: {
+      example: {
+        message: '🗑️ Удаление завершено',
+        provider: 'mc',
+        olderThanDays: 30,
+        deletedCount: 123,
+      },
+    },
+  })
+  @ApiResponse({ status: 500, description: 'Ошибка при удалении данных' })
   async deleteData(
     @Query('provider') provider?: string | string[],
     @Query('days') daysRaw?: string,
@@ -88,6 +152,29 @@ export class AppController {
   }
 
   @Get('delete-manual') //Временное решение для ручного удаления
+  @ApiOperation({ summary: 'Ручное удаление данных (временный эндпоинт)' })
+  @ApiQuery({
+    name: 'provider',
+    required: false,
+    example: 'dipos',
+    description: 'Провайдер, чьи данные нужно удалить',
+  })
+  @ApiQuery({
+    name: 'days',
+    required: false,
+    example: '10',
+    description: 'Удалить записи старше указанного числа дней',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Удаление вручную завершено',
+    schema: {
+      example: {
+        message: '🗑️ Удаление вручную',
+        deletedCount: 45,
+      },
+    },
+  })
   async deleteManual(
     @Query('provider') provider?: string | string[],
     @Query('days') daysRaw?: string,

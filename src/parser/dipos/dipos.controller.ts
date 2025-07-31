@@ -4,7 +4,9 @@ import { DiposParserService } from './dipos.service';
 import * as path from 'path';
 import * as fs from 'fs';
 import { GetProductsService } from 'src/database/get-products.service';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Парсер Dipos')
 @Controller('parser-dipos')
 export class DiposParserController {
   private readonly logger = new Logger(DiposParserController.name);
@@ -24,6 +26,8 @@ export class DiposParserController {
   }
 
   @Get('parse')
+  @ApiOperation({ summary: 'Запустить парсер Dipos' })
+  @ApiResponse({ status: 200, description: 'Парсинг успешно завершён' })
   async parse() {
     await this.diposParserService.fetchAndDownloadPriceList();
     const data = (await this.diposParserService.parseDownloadedFile()) || '';
@@ -31,6 +35,51 @@ export class DiposParserController {
   }
 
   @Get('data')
+  @ApiOperation({ summary: 'Получить сохранённые товары из базы' })
+  @ApiQuery({ name: 'page', required: false, example: '1', description: 'Номер страницы' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    example: '100',
+    description: 'Количество товаров на странице',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Пример успешного ответа',
+    schema: {
+      example: {
+        message: '📦 Получены данные из базы',
+        provider: 'dipos',
+        total: 1770,
+        perPage: 100,
+        products: [
+          {
+            id: 22903,
+            provider: 'dipos',
+            category: 'Полоса',
+            name: 'Полоса оцинк.  50х 2,5 ст3, 6000 СП',
+            size: null,
+            length: null,
+            mark: 'ГОСТ 6009-74, ВВ СМЦ',
+            weight: null,
+            units1: 'т',
+            price1: '69.600',
+            units2: '',
+            price2: '',
+            units3: '',
+            price3: '',
+            location: null,
+            link: null,
+            createdAt: '2025-07-31T05:23:12.895Z',
+            updatedAt: '2025-07-31T05:23:12.895Z',
+            available: true,
+            image: null,
+          },
+        ],
+      },
+    },
+  })
+  @ApiResponse({ status: 500, description: 'Ошибка при получении данных' })
   async getSavedData(@Query('page') page = '1', @Query('limit') limit = '100') {
     try {
       const { skip, take } = this.normalizePagination(page, limit);
@@ -43,7 +92,6 @@ export class DiposParserController {
       return {
         message: '📦 Получены данные из базы',
         provider: this.PROVIDER_NAME,
-        totalProduct: products.length,
         total,
         perPage: take,
         products,
@@ -57,6 +105,10 @@ export class DiposParserController {
   }
 
   @Get('download')
+  @ApiOperation({ summary: 'Скачать Excel-файл с товарами Dipos' })
+  @ApiResponse({ status: 200, description: 'Файл Excel успешно сгенерирован и отправлен' })
+  @ApiResponse({ status: 404, description: 'Файл не найден' })
+  @ApiResponse({ status: 500, description: 'Ошибка при формировании файла' })
   async downloadExcel(@Res() res: Response) {
     const provider = this.PROVIDER_NAME;
     const fileName = `${provider}.xlsx`;
