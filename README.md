@@ -12,6 +12,53 @@ npx ts-node scripts/sync.ts
 DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19wSmRSZnQ3YnVxd0JKeDMtRXd1NE4iLCJhcGlfa2V5IjoiMDFLMTAxWENaWVFHQVZTR0UwNFhTUFgxSEIiLCJ0ZW5hbnRfaWQiOiIxNWViMTI0MDYzNjI4M2QzM2YxOGM0ZGM2YzMyY2YxYTY0YzY2ZWRkZTA5ODRlNmFkNDM4NmU4MDBmYWYzZTE3IiwiaW50ZXJuYWxfc2VjcmV0IjoiMWIwNmE3ZWItZTJhOC00MjYxLTljYWItNmJlNDBlZjIxOWZlIn0.opp3o63huF_j60p3QB6K77Y-DlZa1Aadhq7_LlER6LQ"
 ```
 
+---
+
+**Документация**
+```ts
+**API**/docs#/
+```
+---
+
+**API**/data?provider=mc,metallotorg,dipos - Выводит спарсенные данные в виде JSON по различным поставщикам, указанным в provider
+```ts
+{
+  "message": "📦 Получены данные из базы",
+  "provider": [
+    "mc",
+    "metallotorg",
+    "dipos"
+  ],
+  "total": 1770,
+  "perPage": 100,
+  "products": [
+    {
+      "id": 102663,
+      "provider": "dipos",
+      "category": "Полоса",
+      "name": "Полоса оцинк.  50х 2,5 ст3, 6000 СП",
+      "size": null,
+      "length": null,
+      "mark": "ГОСТ 6009-74, ВВ СМЦ",
+      "weight": null,
+      "units1": "т",
+      "price1": "69.600",
+      "units2": "",
+      "price2": "",
+      "units3": "",
+      "price3": "",
+      "location": null,
+      "link": null,
+      "createdAt": "2025-07-31T06:14:23.479Z",
+      "updatedAt": "2025-07-31T06:14:23.479Z",
+      "available": true,
+      "image": null
+    },
+    ...
+  ]
+}
+```
+
 ---  
 **Металл Сервис**  
 
@@ -66,7 +113,6 @@ DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJI
 ```ts
 {
   "message": "📦 Получены данные из базы",
-  "totalProduct": 100,
   "total": 4924,
   "perPage": 100,
   "products": [
@@ -96,6 +142,130 @@ DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJI
     ]
 }
 ```  
+---  
+**Dipos**  
 
+**API**/parser-dipos/parse - Парсит сайт https://www.dipos.ru/  
+
+**API**/parser-dipos/download - Скачивает excel таблицу с товарами Dipos  
+
+**API**/parser-dipos/data?page=1&limit=100 - Выводит спарсенные данные в виде JSON  
+
+```ts
+{
+  "message": "📦 Получены данные из базы",
+  "provider": "dipos",
+  "total": 1770,
+  "perPage": 100,
+  "products": [
+    {
+      "id": 102663,
+      "provider": "dipos",
+      "category": "Полоса",
+      "name": "Полоса оцинк.  50х 2,5 ст3, 6000 СП",
+      "size": null,
+      "length": null,
+      "mark": "ГОСТ 6009-74, ВВ СМЦ",
+      "weight": null,
+      "units1": "т",
+      "price1": "69.600",
+      "units2": "",
+      "price2": "",
+      "units3": "",
+      "price3": "",
+      "location": null,
+      "link": null,
+      "createdAt": "2025-07-31T06:14:23.479Z",
+      "updatedAt": "2025-07-31T06:14:23.479Z",
+      "available": true,
+      "image": null
+    },
+    ...
+    ]
+}
+```
+---  
+**Ktzholding**  
+
+**API**/parser-ktzholding/parse - Парсит сайт https://www.ktzholding.com/  
+
+**API**/parser-ktzholding/download - Скачивает excel таблицу с товарами Ktzholding  
+
+**API**/parser-ktzholding/data?page=1&limit=100 - Выводит спарсенные данные в виде JSON  
+
+```ts
+{
+  "message": "📦 Получены данные из базы",
+  "total": 985,
+  "perPage": 100,
+  "products": [
+    {
+      "id": 100893,
+      "provider": "ktzholding",
+      "category": "Швеллер",
+      "name": "Швеллер 30П",
+      "size": "30П",
+      "length": "12000",
+      "mark": "Ст3",
+      "weight": "0",
+      "units1": "Цена FCA, т. ₽",
+      "price1": "133000",
+      "units2": "",
+      "price2": "",
+      "units3": "",
+      "price3": "",
+      "location": "Дмитров",
+      "link": "https://ktzholding.com/category/shveller/669ec1fb-a303-41c8-ab45-d430fc043c6a",
+      "createdAt": "2025-07-31T06:14:07.570Z",
+      "updatedAt": "2025-07-31T06:14:07.570Z",
+      "available": true,
+      "image": "https://ktzholding.com/media/subcategory_image/швеллер_2.svg"
+    },
+    ...
+    ]
+}
+```
+---  
+**Brokinvest**  
+
+**API**/parser-metallotorg/parse - Парсит сайт https://www.brokinvest.ru/  
+
+**API**/parser-metallotorg/download - Скачивает excel таблицу с товарами Brokinvest  
+
+**API**/parser-metallotorg/data?page=1&limit=100 - Выводит спарсенные данные в виде JSON  
+
+```ts
+{
+  "message": "📦 Получены данные из базы",
+  "provider": "brokinvest",
+  "total": 895,
+  "perPage": 100,
+  "products": [
+    {
+      "id": 89745,
+      "provider": "brokinvest",
+      "category": "Уголок",
+      "name": "Уголок 75х75х6х12000 ГОСТ 8509 Ст3сп/пс ",
+      "size": "",
+      "length": "12000",
+      "mark": "ГОСТ 8509",
+      "weight": "75",
+      "units1": "т",
+      "price1": "59500",
+      "units2": "",
+      "price2": "",
+      "units3": "",
+      "price3": "",
+      "location": "22",
+      "link": "https://www.brokinvest.ru/product/ugolok-75x75x6x12000-gost-8509-st3spps",
+      "createdAt": "2025-07-30T10:09:27.141Z",
+      "updatedAt": "2025-07-31T06:21:53.630Z",
+      "available": true,
+      "image": "https://back.brokinvest.ru/api/v1/files/catalog/32a5073b-89df-469d-980f-cf163d16237e.jpeg"
+    },
+    ...
+    ]
+}
+```  
 ---  
 **API**/pdf/manual - Выводит данные из pdf в excel
