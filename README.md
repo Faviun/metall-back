@@ -181,7 +181,7 @@ DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJI
 ---  
 **Ktzholding**  
 
-**API**/parser-ktzholding/parse - Парсит сайт https://www.ktzholding.ru/  
+**API**/parser-ktzholding/parse - Парсит сайт https://www.ktzholding.com/  
 
 **API**/parser-ktzholding/download - Скачивает excel таблицу с товарами Ktzholding  
 
