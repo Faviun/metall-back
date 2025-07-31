@@ -14,6 +14,12 @@ DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJI
 
 ---
 
+**Документация**
+```ts
+**API**/docs#/
+```
+---
+
 **API**/data?provider=mc,metallotorg,dipos - Выводит спарсенные данные в виде JSON по различным поставщикам, указанным в provider
 ```ts
 {
