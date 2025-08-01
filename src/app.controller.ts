@@ -1,8 +1,12 @@
-import { Controller, Delete, Get, Logger, Query } from '@nestjs/common';
+import { Controller, Delete, Get, Logger, Query, Res } from '@nestjs/common';
 import { AppService } from './app.service';
+import { Response } from 'express';
 import { GetProductsService } from './database/get-products.service';
 import { DeleteProductsService } from './database/delete-products.service';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import * as path from 'path';
+import * as fs from 'fs';
+import { ExportExcelProductsService } from './database/export-excel.service';
 
 @ApiTags('Управление данными')
 @Controller()
@@ -11,6 +15,7 @@ export class AppController {
     private readonly appService: AppService,
     private readonly productsDb: GetProductsService,
     private readonly deleteService: DeleteProductsService,
+    private readonly exportService: ExportExcelProductsService,
   ) {}
 
   private readonly logger = new Logger(AppController.name);
@@ -98,6 +103,53 @@ export class AppController {
         message: '❌ Ошибка при получении данных',
         error: error.message,
       };
+    }
+  }
+
+  @Get('download')
+  @ApiOperation({ summary: 'Скачать Excel-файл с товарами от выбранных поставщиков' })
+  @ApiResponse({ status: 200, description: 'Файл Excel успешно сгенерирован и отправлен' })
+  @ApiResponse({ status: 404, description: 'Файл не найден' })
+  @ApiResponse({ status: 500, description: 'Ошибка при формировании файла' })
+  @ApiQuery({
+    name: 'provider',
+    required: true,
+    example: 'brokinvest,mc,dipos',
+    description: 'Имя провайдера или список через запятую',
+  })
+  async downloadExcel(@Query('provider') provider: string, @Res() res: Response): Promise<void> {
+    const providerList = provider ? provider.split(',') : undefined;
+
+    if (!provider) {
+      res.status(400).send('Параметр provider обязателен');
+      return;
+    }
+
+    const fileName = `data.xlsx`;
+    const filePath = path.join(process.cwd(), 'exports', fileName);
+
+    try {
+      await this.exportService.exportToExcelFromDb(filePath, providerList);
+
+      if (!fs.existsSync(filePath)) {
+        res.status(404).send('Файл не найден');
+        return;
+      }
+
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${encodeURIComponent(fileName)}"`,
+      );
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+
+      const stream = fs.createReadStream(filePath);
+      stream.pipe(res);
+    } catch (error) {
+      this.logger.error(`Ошибка при скачивании файла Excel: ${error.message}`);
+      res.status(500).send('Ошибка при формировании файла');
     }
   }
 

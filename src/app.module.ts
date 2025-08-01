@@ -11,6 +11,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { BrokinvestParserModule } from './parser/brokinvest/brokinvest.module';
 import { GetProductsService } from './database/get-products.service';
 import { DeleteProductsService } from './database/delete-products.service';
+import { ExportExcelProductsService } from './database/export-excel.service';
 
 @Module({
   imports: [
@@ -24,6 +25,6 @@ import { DeleteProductsService } from './database/delete-products.service';
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
-  providers: [AppService, GetProductsService, DeleteProductsService],
+  providers: [AppService, GetProductsService, DeleteProductsService, ExportExcelProductsService],
 })
 export class AppModule {}
