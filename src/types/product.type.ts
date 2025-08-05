@@ -7,14 +7,18 @@ export type Product = {
   length: string | null;
   weight: string | null;
   location: string | null;
-  price1: string | null;
-  price2: string | null;
-  price3: string | null;
+  price1: number | null;
   units1: string | null;
+  price2: number | null;
   units2: string | null;
+  price3: number | null;
   units3: string | null;
   available: boolean | null;
   image: string | null;
   link: string | null;
-  description?: string | null;
+  description?: string;
+  uniqueString: string;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 };

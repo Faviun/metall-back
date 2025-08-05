@@ -24,7 +24,6 @@ export class ktzholdingParserService {
     await this.fetchAllProducts();
   }
 
-
   async fetchAllProducts(): Promise<void> {
     for (const category of this.categories) {
       try {
@@ -44,7 +43,9 @@ export class ktzholdingParserService {
         }
 
         await this.saveToDatabase(validProducts);
-        this.logger.log(`✅ Сохранено: ${validProducts.length} шт. из категории: ${category.nameRu}`);
+        this.logger.log(
+          `✅ Сохранено: ${validProducts.length} шт. из категории: ${category.nameRu}`,
+        );
       } catch (error) {
         this.logger.error(`❌ Ошибка парсинга категории ${category.nameRu}: ${error.message}`);
       }
@@ -63,25 +64,38 @@ export class ktzholdingParserService {
       .filter((p) => this.allowedWarehouses.includes(p.prices?.[0]?.wh))
       .map((p) => {
         const priceInfo = p.prices?.[0];
+
+        const name = p.name;
+        const size = p.size;
+        const mark = p.mark_of_steel;
+        const weight = p.weight != null ? String(p.weight) : '';
+        const location = priceInfo?.wh || '';
+        const price1 = priceInfo.price || null;
+        const link = `https://ktzholding.com/category/${categoryEn || 'unknown'}/${p.id}`;
+
+        const today = new Date().toISOString().split('T')[0];
+        const uniqueString = name + mark + price1 + link + today;
+
         return {
           provider: this.provider,
           category: categoryRu || '',
-          name: p.name,
-          size: p.size,
-          mark: p.mark_of_steel,
-          weight: p.weight != null ? String(p.weight) : null,
-          location: priceInfo?.wh || null,
-          price1: priceInfo?.price != null ? String(priceInfo.price) : null,
+          name,
+          size,
+          mark,
+          weight,
+          location,
+          price1,
           units1: 'Цена FCA, т. ₽',
-          image: p.image ? `https://ktzholding.com${p.image}` : null,
+          image: p.image ? `https://ktzholding.com${p.image}` : '',
           link: `https://ktzholding.com/category/${categoryEn || 'unknown'}/${p.id}`,
           description: '',
           length: p.length,
-          price2: '',
+          price2: null,
           units2: '',
-          price3: '',
+          price3: null,
           units3: '',
           available: true,
+          uniqueString,
         };
       });
   }

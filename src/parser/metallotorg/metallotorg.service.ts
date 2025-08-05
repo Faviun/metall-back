@@ -5,11 +5,14 @@ import { SaveProductsService } from 'src/database/save-products.service';
 import { Product } from 'src/types/product.type';
 import { ExportExcelProductsService } from 'src/database/export-excel.service';
 import { Cron } from '@nestjs/schedule';
+import { allCategories } from 'src/utils/categories';
 
 @Injectable()
 export class MetallotorgParserService {
   private readonly logger = new Logger(MetallotorgParserService.name);
-  private readonly categories = metallotorgCategories;
+  // private readonly categories = metallotorgCategories;
+  private readonly categories = allCategories;
+  private readonly provider = 'metallotorg';
 
   constructor(
     private readonly saveProducts: SaveProductsService,
@@ -28,7 +31,7 @@ export class MetallotorgParserService {
     const page = await browser.newPage();
 
     await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
     );
     await page.setExtraHTTPHeaders({
       'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
@@ -48,58 +51,77 @@ export class MetallotorgParserService {
       return [];
     }
 
-    const products: Product[] = await page.evaluate((categories) => {
-      const rows = Array.from(document.querySelectorAll('table tbody tr'));
-      return rows
-        .filter(row => row.querySelectorAll('td').length >= 10)
-        .map(row => {
-          const cells = row.querySelectorAll('td');
-          const nameLink = cells[0].querySelector('a');
-          const href = nameLink?.getAttribute('href') || '';
-          const name = nameLink?.textContent?.trim() || '';
+    const today = new Date().toISOString().split('T')[0];
+    const categories = this.categories;
+    const provider = this.provider;
 
-          let category = '';
-          for (const item of categories) {
-            if (name.toLowerCase().includes(item.name.toLowerCase())) {
-              category = item.category;
-              break;
-            }
-          }
+    const products: Product[] = await page.evaluate(
+      (categories, provider, todayStr) => {
+        const rows = Array.from(document.querySelectorAll('table tbody tr'));
+        return rows
+          .filter((row) => row.querySelectorAll('td').length >= 10)
+          .map((row) => {
+            const cells = row.querySelectorAll('td');
+            const nameLink = cells[0].querySelector('a');
+            const href = nameLink?.getAttribute('href') || '';
+            const name = nameLink?.textContent?.trim() || '';
 
-          return {
-            provider: 'metallotorg',
-            category,
-            name,
-            size: cells[1]?.textContent?.trim() || '',
-            length: cells[2]?.textContent?.trim() || '',
-            mark: cells[3]?.textContent?.trim() || '',
-            weight: cells[4]?.textContent?.trim() || '',
-            price1: cells[6]?.textContent?.trim() || '',
-            price2: cells[7]?.textContent?.trim() || '',
-            price3: cells[8]?.textContent?.trim() || '',
-            units1: 'Цена 1 - 5 т.',
-            units2: 'Цена от 5 т. до 15 т.',
-            units3: 'Цена > 15 т.',
-            location: cells[9]?.textContent?.trim() || '',
-            link: href ? `https://metallotorg.ru${href}` : '',
-            image: null,
-            available: null,
-          };
-        });
-    }, this.categories);
+            const size = cells[1]?.textContent?.trim() || '';
+            const length = cells[2]?.textContent?.trim() || '';
+            const mark = cells[3]?.textContent?.trim() || '';
+            const weight = cells[4]?.textContent?.trim() || '';
+            const location = cells[9]?.textContent?.trim() || '';
+            const link = href ? `https://metallotorg.ru${href}` : '';
+
+            const price1Str = cells[6]?.textContent?.trim() || '';
+            const price2Str = cells[7]?.textContent?.trim() || '';
+            const price3Str = cells[8]?.textContent?.trim() || '';
+
+            const price1 = price1Str ? parseFloat(price1Str.replace(',', '.')) : null;
+            const price2 = price2Str ? parseFloat(price2Str.replace(',', '.')) : null;
+            const price3 = price3Str ? parseFloat(price3Str.replace(',', '.')) : null;
+
+            const foundCategory = categories.find((cat) => name.includes(cat)) || 'Другое';
+            const uniqueString = name + mark + price1 + link + todayStr;
+
+            return {
+              provider,
+              category: foundCategory,
+              name,
+              size,
+              length,
+              mark,
+              weight,
+              price1,
+              price2,
+              price3,
+              units1: 'Цена 1 - 5 т.',
+              units2: 'Цена от 5 т. до 15 т.',
+              units3: 'Цена > 15 т.',
+              location,
+              link,
+              image: '',
+              available: true,
+              uniqueString,
+            };
+          });
+      },
+      categories,
+      provider,
+      today,
+    );
 
     return products;
   }
 
   // Фильтрация валидных товаров
   private filterValid(products: Product[]): Product[] {
-    return products.filter(p =>
-      p.name &&
-      (
-        (p.price1 && !isNaN(parseFloat(p.price1))) ||
-        (p.price2 && !isNaN(parseFloat(p.price2))) ||
-        (p.price3 && !isNaN(parseFloat(p.price3)))
-      )
+    return products.filter(
+      (p) =>
+        p.name &&
+        ((p.price1 && !isNaN(p.price1)) ||
+          (p.price2 && !isNaN(p.price2)) ||
+          (p.price3 && !isNaN(p.price3))),
     );
   }
 
@@ -114,7 +136,7 @@ export class MetallotorgParserService {
         this.logger.warn(`Попытка ${i + 1} не удалась: ${error.message}`);
         if (i < attempts - 1) {
           this.logger.log(`Ждём ${delayMs} мс перед повтором...`);
-          await new Promise(r => setTimeout(r, delayMs));
+          await new Promise((r) => setTimeout(r, delayMs));
         }
       }
     }
@@ -135,7 +157,9 @@ export class MetallotorgParserService {
           this.logger.log(`Пустая страница ${pageNum} (${emptyPagesInRow} подряд)`);
 
           if (emptyPagesInRow >= maxEmptyPages) {
-            this.logger.warn(`Обнаружено ${maxEmptyPages} пустых страниц подряд. Парсинг остановлен.`);
+            this.logger.warn(
+              `Обнаружено ${maxEmptyPages} пустых страниц подряд. Парсинг остановлен.`,
+            );
             break;
           }
           continue;
@@ -160,7 +184,10 @@ export class MetallotorgParserService {
   }
 
   // Экспорт в Excel — делегируем ExportExcelProductsService
-  async exportToExcelFromDb(fileName = 'metallotorg.xlsx', provider = 'metallotorg'): Promise<void> {
+  async exportToExcelFromDb(
+    provider = this.provider,
+    fileName = `${provider}.xlsx`,
+  ): Promise<void> {
     await this.exportService.exportToExcelFromDb(fileName, provider);
   }
 }

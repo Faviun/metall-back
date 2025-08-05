@@ -10,60 +10,54 @@ export class SaveProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async saveMany(products: Product[]) {
-    const normalizedProducts = products
-      .filter((p) => p)
-      .map((p) => ({
-        ...p,
-        link: p.link || null,
-      }));
-
     let createdCount = 0;
     let updatedCount = 0;
     let failedCount = 0;
 
-    for (let i = 0; i < normalizedProducts.length; i += this.BATCH_SIZE) {
-      const batch = normalizedProducts.slice(i, i + this.BATCH_SIZE);
-      this.logger.log(`🚀 Обработка партии с ${i} по ${i + batch.length - 1} (всего: ${batch.length})`);
+    for (let i = 0; i < products.length; i += this.BATCH_SIZE) {
+      const batch = products.slice(i, i + this.BATCH_SIZE);
+      this.logger.log(
+        `🚀 Обработка партии с ${i} по ${i + batch.length - 1} (всего: ${batch.length})`,
+      );
 
       for (const product of batch) {
         try {
-          if (product.link) {
-            const result = await this.prisma.parser.upsert({
-              where: { link: product.link },
-              update: {
-                provider: product.provider,
-                category: product.category,
-                name: product.name,
-                size: product.size,
-                mark: product.mark,
-                length: product.length,
-                weight: product.weight,
-                location: product.location,
-                price1: product.price1,
-                price2: product.price2,
-                price3: product.price3,
-                units1: product.units1,
-                units2: product.units2,
-                units3: product.units3,
-                image: product.image,
-                available: product.available,
-              },
-              create: product,
-            });
+          const result = await this.prisma.parser.upsert({
+            where: { uniqueString: product.uniqueString },
+            update: {
+              provider: product.provider,
+              category: product.category,
+              name: product.name,
+              size: product.size,
+              mark: product.mark,
+              length: product.length,
+              weight: product.weight,
+              location: product.location,
+              price1: product.price1,
+              units1: product.units1,
+              price2: product.price2,
+              units2: product.units2,
+              price3: product.price3,
+              units3: product.units3,
+              image: product.image,
+              available: product.available,
+              link: product.link,
+              uniqueString: product.uniqueString,
+              description: product.description,
+            },
+            create: product,
+          });
 
-            // Простейшая проверка: если вернулся id, значит вставили (условно)
-            if (result.createdAt.getTime() === result.updatedAt.getTime()) {
-              createdCount++;
-            } else {
-              updatedCount++;
-            }
-          } else {
-            await this.prisma.parser.create({ data: product });
+          if (result.createdAt.getTime() === result.updatedAt.getTime()) {
             createdCount++;
+          } else {
+            updatedCount++;
           }
         } catch (error) {
           failedCount++;
-          this.logger.warn(`⛔ Ошибка в товаре: ${product.name} (${product.link}) → ${error.message}`);
+          this.logger.warn(
+            `⛔ Ошибка в товаре: ${product.name} (${product.link}) → ${error.message}`,
+          );
           if ((error as any).meta) {
             this.logger.warn(`↪️ Prisma Meta: ${(error as any).meta.target}`);
           }
@@ -71,7 +65,7 @@ export class SaveProductsService {
       }
     }
 
-    this.logger.log(`🎉 Всего товаров обработано: ${normalizedProducts.length}`);
+    this.logger.log(`🎉 Всего товаров обработано: ${products.length}`);
     this.logger.log(`✅ Создано: ${createdCount}`);
     this.logger.log(`🔁 Обновлено: ${updatedCount}`);
     this.logger.warn(`❌ Не удалось сохранить: ${failedCount}`);

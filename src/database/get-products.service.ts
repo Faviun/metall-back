@@ -41,6 +41,7 @@ export class GetProductsService {
         price3: true,
         location: true,
         link: true,
+        uniqueString: true,
         createdAt: true,
         updatedAt: true,
         available: true,

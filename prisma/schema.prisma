@@ -14,30 +14,29 @@ datasource db {
 // }
 
 model Parser {
-  id          Int      @id @default(autoincrement())
-  provider    String
-  category    String
-  description String?
-  name        String
-  size        String?
-  mark        String?
-  length      String?
-  weight      String?
-  location    String?
-  price1      String?
-  units1      String?
-  price2      String?
-  units2      String?
-  price3      String?
-  units3      String?
-  available   Boolean?
-  image       String?
-  link        String?
+  id           Int      @id @default(autoincrement())
+  provider     String
+  category     String
+  description  String?
+  name         String
+  size         String?
+  mark         String?
+  length       String?
+  weight       String?
+  location     String?
+  price1       Float?
+  units1       String?
+  price2       Float?
+  units2       String?
+  price3       Float?
+  units3       String?
+  available    Boolean?
+  image        String?
+  link         String?
+  uniqueString String   @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@unique([link])
 }
 
 // model MetalProduct {

@@ -112,10 +112,13 @@ export class DiposParserService {
         const name = row[0]?.toString().trim() || '';
         const mark = row[1]?.toString().trim() || '';
         const units1 = row[2]?.toString().trim() || '';
-        const price1 = row[3]?.toString().replace(',', '.').trim() || '';
+        const price1 = parsePrice(row[3]) || null;
 
-        if (name && !isNaN(parseFloat(price1))) {
+        if (name && price1) {
           const foundCategory = this.categories.find((cat) => name.includes(cat)) || 'Другое';
+
+          const today = new Date().toISOString().split('T')[0];
+          const uniqueString = name + mark + price1 + today;
 
           result.push({
             provider: this.provider,
@@ -124,18 +127,19 @@ export class DiposParserService {
             mark,
             price1,
             units1,
-            size: null,
-            location: null,
-            weight: null,
-            image: null,
+            size: '',
+            location: '',
+            weight: '',
+            image: '',
             link: '',
             description: '',
-            length: null,
-            price2: '',
+            length: '',
+            price2: null,
             units2: '',
-            price3: '',
+            price3: null,
             units3: '',
             available: true,
+            uniqueString,
           });
         }
       }
@@ -148,6 +152,16 @@ export class DiposParserService {
     } catch (error) {
       this.logger.error(`❌ Ошибка парсинга: ${error.message}`);
       return [];
+    }
+
+    function parsePrice(priceStr: string | null): number | null {
+      if (!priceStr) return null;
+
+      // Убираем пробелы и все запятые (для тысячных разделителей)
+      const cleaned = priceStr.replace(/\s/g, '').replace(/,/g, '');
+
+      const parsed = Number(cleaned);
+      return isNaN(parsed) ? null : parsed;
     }
   }
 

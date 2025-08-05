@@ -77,15 +77,23 @@ export class BrokinvestParserService {
 
   private mapProducts(products: any[]): Product[] {
     return products.map((p) => {
+      const name = p.title || '';
+      const mark = p.gost || '';
+      const price1 = p.price || null;
+      const location = String(p.stockId) || ''; // 5 - СК Октябрьский 24 - Воронеж
+
+      const today = new Date().toISOString().split('T')[0];
+      const uniqueString = name + mark + price1 + today;
+
       return {
         provider: this.provider,
         category: p.admin_sub_categories?.[0]?.title || '',
-        name: p.title || '',
+        name,
         size: p.size || '',
-        mark: p.gost,
+        mark,
         weight: String(p.width),
-        location: String(p.stockId), // 5 - СК Октябрьский 24 - Воронеж
-        price1: String(p.price),
+        location,
+        price1,
         units1: p.unit,
         image: p.files?.[0]?.file
           ? `https://back.brokinvest.ru/api/v1/files/${p.files?.[0]?.file}`
@@ -93,11 +101,12 @@ export class BrokinvestParserService {
         link: p.staticPath ? `https://www.brokinvest.ru/product/${p.staticPath}` : '',
         description: '',
         length: String(p.height),
-        price2: '',
+        price2: null,
         units2: '',
-        price3: '',
+        price3: null,
         units3: '',
         available: true,
+        uniqueString,
       };
     });
   }
