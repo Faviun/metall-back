@@ -19,11 +19,11 @@ export class MetallotorgParserService {
     private readonly exportService: ExportExcelProductsService,
   ) {}
 
-  @Cron('16,20 18 * * *', { timeZone: 'Europe/Moscow' })
-  async handleCron() {
-    this.logger.log('⏰ Запуск парсера metallotorg.ru по расписанию...');
-    await this.parseCategory();
-  }
+  // @Cron('16,20 18 * * *', { timeZone: 'Europe/Moscow' })
+  // async handleCron() {
+  //   this.logger.log('⏰ Запуск парсера metallotorg.ru по расписанию...');
+  //   await this.parseCategory();
+  // }
 
   // Запуск браузера и подготовка страницы
   private async launchBrowser(): Promise<{ browser: puppeteer.Browser; page: puppeteer.Page }> {

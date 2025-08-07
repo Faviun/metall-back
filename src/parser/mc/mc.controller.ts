@@ -11,7 +11,7 @@ import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 export class McParserController {
   private readonly logger = new Logger(McParserController.name);
   private readonly MAX_LIMIT = 100;
-  private readonly PROVIDER_NAME = 'МЕТАЛЛ СЕРВИС';
+  private readonly PROVIDER_NAME = 'mc';
 
   constructor(
     private readonly parserService: McParserService,
@@ -51,13 +51,13 @@ export class McParserController {
     schema: {
       example: {
         message: '📦 Получены данные из базы',
-        provider: 'МЕТАЛЛ СЕРВИС',
+        provider: 'mc',
         total: 1728,
         perPage: 100,
         products: [
           {
             id: 25102,
-            provider: 'МЕТАЛЛ СЕРВИС',
+            provider: 'mc',
             category: 'Лист оцинкованный',
             name: 'Лист оцинкованный 2х1250х2500 ст 220 Zn120 Н пас',
             size: '2',

@@ -36,7 +36,7 @@ async function retryPageGoto(
 export class McParserService {
   private readonly logger = new Logger(McParserService.name);
   private readonly categories = mcCategories;
-  private readonly PROVIDER = 'МЕТАЛЛ СЕРВИС';
+  private readonly PROVIDER = 'mc';
 
   constructor(
     private readonly saveProducts: SaveProductsService,
@@ -198,8 +198,8 @@ export class McParserService {
   }
 
   async exportToExcelFromDb(
-    fileName = 'МЕТАЛЛ СЕРВИС.xlsx',
-    provider = 'МЕТАЛЛ СЕРВИС',
+    provider = this.PROVIDER,
+    fileName = `${provider}.xlsx`,
   ): Promise<void> {
     await this.exportService.exportToExcelFromDb(fileName, provider);
   }

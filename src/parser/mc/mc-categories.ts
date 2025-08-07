@@ -470,59 +470,55 @@ export const mcCategories = [
   },
   {
     url: 'https://mc.ru/metalloprokat/shestigrannik_nerzhaveyushchij_nikelsoderzhashchij/Page200/',
-    name: 'Шестигранник нержавеющий никельсодержащий',
+    name: 'Шестигранник',
   },
   {
     url: 'https://mc.ru/metalloprokat/polosa_nerzhaveyushchaya_nikelsoderzhashchaya/Page200/',
-    name: 'Полоса нержавеющая никельсодержащая',
+    name: 'Полоса',
   },
   {
     url: 'https://mc.ru/metalloprokat/ugolok_nerzhaveyushchij_nikelsoderzhashchij/Page200/',
-    name: 'Уголок нержавеющий никельсодержащий',
+    name: 'Уголок',
   },
   {
     url: 'https://mc.ru/metalloprokat/sveller_nerzhaveyushchaya_nikelsoderzhashchaya/Page200/',
-    name: 'Швеллер нержавеющий никельсодержащий',
+    name: 'Швеллер',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_nerzhaveyushchie_ehlektrosvarnye_aisi/Page200/',
-    name: 'Трубы нержавеющие электросварные AISI',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_nerzhaveyushchie_ehlektrosvarnye_aisi_pryamougolnye/Page200/',
-    name: 'Трубы нержавеющие электросварные AISI прямоугольные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_nerzhaveyushchie_ehlektrosvarnye_aisi_kvadratnye/Page200/',
-    name: 'Трубы нержавеющие электросварные AISI квадратные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_nerzhaveyushchie_besshovnye/Page200/',
-    name: 'Трубы нержавеющие бесшовные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/stal_listovaya_nerzhaveyushchaya_bez_nikelya/Page200/',
-    name: 'Лист нержавеющий без никеля',
+    name: 'Лист',
   },
   {
     url: 'https://mc.ru/metalloprokat/stal_listovaya_nerzhaveyushchaya_nikelsoderzhashchaya/Page200/',
-    name: 'Лист нержавеющий никельсодержащий',
+    name: 'Лист',
   },
   {
     url: 'https://mc.ru/metalloprokat/stal_listovaya_nerzhaveyushchaya_pvl/Page200/',
-    name: 'Лист нержавеющий ПВЛ',
-  },
-  {
-    url: 'https://mc.ru/metalloprokat/stal_listovaya_duplex/Page200/',
-    name: 'Дуплексная сталь',
+    name: 'Лист',
   },
   {
     url: 'https://mc.ru/metalloprokat/provoloka_nerzhaveyushchaya/Page200/',
-    name: 'Проволока нержавеющая',
+    name: 'Проволока',
   },
   {
     url: 'https://mc.ru/metalloprokat/krepyozh_iz_nerzhaveyushchej_stali/Page200/',
-    name: 'Крепёж из нержавеющей стали',
+    name: 'Крепёж',
   },
   {
     url: 'https://mc.ru/metalloprokat/lestnichnye_ograzhdeniya/Page200/',
@@ -748,31 +744,31 @@ export const mcCategories = [
 
   {
     url: 'https://mc.ru/metalloprokat/truby_g_d/Page200/',
-    name: 'Трубы стальные горячедеформированные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_h_d/Page200/',
-    name: 'Трубы стальные холоднодеформированные',
+    name: 'Трубы ',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_vgp/Page200/',
-    name: 'Трубы ВГП',
+    name: 'ТрубыП',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_vgp_ocinkovannye_gost_3262_75/Page200/',
-    name: 'Трубы ВГП оцинкованные ГОСТ 3262-75',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_ehlektrosvarnye_kvadratnye/Page200/',
-    name: 'Трубы электросварные квадратные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_elektrosvarnye_v_izolyacii_ppu/Page200/',
-    name: 'Трубы электросварные в изоляции ППУ',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_kvadratnye_ocinkovannye/Page200/',
-    name: 'Трубы квадратные оцинкованные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_obechajka/Page200/',
@@ -780,51 +776,51 @@ export const mcCategories = [
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_ehlektrosvarnye_kruglye/Page200/',
-    name: 'Трубы электросварные круглые',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_ehlektrosvarnye_pryamougolnye/Page200/',
-    name: 'Трубы электросварные прямоугольные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_ehlektrosvarnye_ocinkovannye/Page200/',
-    name: 'Трубы круглые оцинкованные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_pryamougolnye_ocinkovannye/Page200/',
-    name: 'Трубы прямоугольные оцинкованные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_elektrosvarnye_nizkolegirovannye_kruglye/Page200/',
-    name: 'Трубы электросварные низколегированные круглые',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_elektrosvarnye_nizkolegirovannye_kvadratnye/Page200/',
-    name: 'Трубы электросварные низколегированные квадратные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_elektrosvarnye_nizkolegirovannye_pryamougolnye/Page200/',
-    name: 'Трубы электросварные низколегированные прямоугольные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_ocinkovannye_krugllue/Page200/',
-    name: 'Трубы оцинкованные круглые',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_ocinkovannye_kvadratnye/Page200/',
-    name: 'Трубы оцинкованные квадратные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_ocinkovannye_pryamougolnye/Page200/',
-    name: 'Трубы оцинкованные прямоугольные',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_chugunnye_ck/Page200/',
-    name: 'Трубы чугунные ЧК',
+    name: 'Трубы',
   },
   {
     url: 'https://mc.ru/metalloprokat/truby_chugun_sml/Page200/',
-    name: 'Трубы чугунные SML',
+    name: 'Трубы',
   },
 
   // // Инженерные системы
