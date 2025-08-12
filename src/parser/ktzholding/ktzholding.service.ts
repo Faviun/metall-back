@@ -5,26 +5,39 @@ import { SaveProductsService } from 'src/database/save-products.service';
 import { Product } from 'src/types/product.type';
 import { ExportExcelProductsService } from 'src/database/export-excel.service';
 import { Cron } from '@nestjs/schedule';
+import * as fs from 'fs';
+import { nameUnific } from 'src/utils/name-unific';
+import { getExcelStreamFromDb } from 'src/utils/excel.helper';
 
 @Injectable()
 export class ktzholdingParserService {
   private readonly logger = new Logger(ktzholdingParserService.name);
   private readonly categories = ctzCategories;
-  private readonly provider = 'ktzholding';
+  private readonly PROVIDER = 'ktzholding';
   private readonly allowedWarehouses = ['Дмитров', 'Ивантеевка'];
+  private isRunning = false;
+  private cancelRequested = false;
 
   constructor(
     private readonly saveProducts: SaveProductsService,
     private readonly exportService: ExportExcelProductsService,
   ) {}
 
-  @Cron('50 18 * * *', { timeZone: 'Europe/Moscow' })
-  async handleCron() {
-    this.logger.log('⏰ Запуск парсера metallotorg.ru по расписанию...');
-    await this.fetchAllProducts();
-  }
+  // @Cron('50 18 * * *', { timeZone: 'Europe/Moscow' })
+  // async handleCron() {
+  //   this.logger.log('⏰ Запуск парсера metallotorg.ru по расписанию...');
+  //   await this.fetchAllProducts();
+  // }
 
   async fetchAllProducts(): Promise<void> {
+    if (this.isRunning) {
+      this.logger.warn('⚠️ Парсер уже запущен, новый запуск невозможен.');
+      return;
+    }
+
+    this.isRunning = true;
+    this.cancelRequested = false;
+
     for (const category of this.categories) {
       try {
         const products = await this.fetchCategoryProducts(category.url);
@@ -50,6 +63,22 @@ export class ktzholdingParserService {
         this.logger.error(`❌ Ошибка парсинга категории ${category.nameRu}: ${error.message}`);
       }
     }
+
+    this.isRunning = false;
+
+    if (this.cancelRequested) {
+      this.logger.warn('⛔ Парсер был отменён пользователем.');
+    }
+  }
+
+  /** Метод для запроса отмены парсера */
+  cancelParsing(): void {
+    if (!this.isRunning) {
+      this.logger.warn('Парсер не запущен — отменять нечего.');
+      return;
+    }
+    this.cancelRequested = true;
+    this.logger.warn('Отмена парсинга запрошена.');
   }
 
   private async fetchCategoryProducts(url: string): Promise<any[]> {
@@ -66,6 +95,7 @@ export class ktzholdingParserService {
         const priceInfo = p.prices?.[0];
 
         const name = p.name;
+        const uName = nameUnific(name);
         const size = p.size;
         const mark = p.mark_of_steel;
         const weight = p.weight != null ? String(p.weight) : '';
@@ -77,9 +107,9 @@ export class ktzholdingParserService {
         const uniqueString = name + mark + price1 + link + today;
 
         return {
-          provider: this.provider,
+          provider: this.PROVIDER,
           category: categoryRu || '',
-          name,
+          name: uName.raw,
           size,
           mark,
           weight,
@@ -88,7 +118,7 @@ export class ktzholdingParserService {
           units1: 'Цена FCA, т. ₽',
           image: p.image ? `https://ktzholding.com${p.image}` : '',
           link: `https://ktzholding.com/category/${categoryEn || 'unknown'}/${p.id}`,
-          description: '',
+          description: name,
           length: p.length,
           price2: null,
           units2: '',
@@ -108,7 +138,14 @@ export class ktzholdingParserService {
     }
   }
 
-  async exportToExcelFromDb(fileName = 'ktzholding.xlsx', provider = this.provider): Promise<void> {
+  async exportToExcelFromDb(
+    provider = this.PROVIDER,
+    fileName = `${provider}.xlsx`,
+  ): Promise<void> {
     await this.exportService.exportToExcelFromDb(fileName, provider);
+  }
+
+  async getExcelStream(provider: string): Promise<fs.ReadStream> {
+    return getExcelStreamFromDb(this.exportToExcelFromDb.bind(this), provider);
   }
 }

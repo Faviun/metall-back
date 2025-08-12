@@ -16,7 +16,7 @@ export type Product = {
   available: boolean | null;
   image: string | null;
   link: string | null;
-  description?: string;
+  description?: string | null;
   uniqueString: string;
 
   createdAt?: Date;

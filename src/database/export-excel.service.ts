@@ -38,6 +38,7 @@ export class ExportExcelProductsService {
     XLSX.utils.book_append_sheet(wb, ws, 'Товары');
 
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    this.logger.debug(`📄 Полный путь для сохранения Excel: ${filePath}`);
     XLSX.writeFile(wb, filePath);
 
     this.logger.log(`📁 Excel-файл сохранён: ${filePath}`);

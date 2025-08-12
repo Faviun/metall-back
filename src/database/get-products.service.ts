@@ -11,7 +11,7 @@ export class GetProductsService {
     const whereClause: any = {
       AND: [
         {
-          // OR: [{ createdAt: { gte: today } }, { updatedAt: { gte: today } }],
+          OR: [{ createdAt: { gte: today } }, { updatedAt: { gte: today } }],
         },
       ],
     };
@@ -29,6 +29,7 @@ export class GetProductsService {
         provider: true,
         category: true,
         name: true,
+        description: true,
         size: true,
         length: true,
         mark: true,
@@ -59,7 +60,7 @@ export class GetProductsService {
     const whereClause: any = {
       AND: [
         {
-          // OR: [{ createdAt: { gte: today } }, { updatedAt: { gte: today } }],
+          OR: [{ createdAt: { gte: today } }, { updatedAt: { gte: today } }],
         },
       ],
     };

@@ -1,18 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as puppeteer from 'puppeteer';
-import { metallotorgCategories } from './metallotorg-categories';
 import { SaveProductsService } from 'src/database/save-products.service';
 import { Product } from 'src/types/product.type';
 import { ExportExcelProductsService } from 'src/database/export-excel.service';
 import { Cron } from '@nestjs/schedule';
+import * as fs from 'fs';
 import { allCategories } from 'src/utils/categories';
+import { getExcelStreamFromDb } from 'src/utils/excel.helper';
 
 @Injectable()
 export class MetallotorgParserService {
   private readonly logger = new Logger(MetallotorgParserService.name);
-  // private readonly categories = metallotorgCategories;
   private readonly categories = allCategories;
-  private readonly provider = 'metallotorg';
+  private readonly PROVIDER = 'metallotorg';
+  private isRunning = false;
+  private cancelRequested = false;
 
   constructor(
     private readonly saveProducts: SaveProductsService,
@@ -53,7 +55,7 @@ export class MetallotorgParserService {
 
     const today = new Date().toISOString().split('T')[0];
     const categories = this.categories;
-    const provider = this.provider;
+    const provider = this.PROVIDER;
 
     const products: Product[] = await page.evaluate(
       (categories, provider, todayStr) => {
@@ -145,49 +147,81 @@ export class MetallotorgParserService {
 
   // Основной метод парсинга всех страниц
   async parseCategory(): Promise<void> {
+    if (this.isRunning) {
+      this.logger.warn('⚠️ Парсер уже запущен, новый запуск невозможен.');
+      return;
+    }
+
+    this.isRunning = true;
+    this.cancelRequested = false;
+
     const { browser, page } = await this.launchBrowser();
     let emptyPagesInRow = 0;
     const maxEmptyPages = 3;
 
-    for (let pageNum = 1; pageNum <= 1000; pageNum++) {
-      try {
-        const products = await this.retry(() => this.parsePage(page, pageNum));
-        if (!products.length) {
-          emptyPagesInRow++;
-          this.logger.log(`Пустая страница ${pageNum} (${emptyPagesInRow} подряд)`);
-
-          if (emptyPagesInRow >= maxEmptyPages) {
-            this.logger.warn(
-              `Обнаружено ${maxEmptyPages} пустых страниц подряд. Парсинг остановлен.`,
-            );
-            break;
-          }
-          continue;
+    try {
+      for (let pageNum = 1; pageNum <= 1000; pageNum++) {
+        if (this.cancelRequested) {
+          this.logger.warn('⛔ Парсер был отменён пользователем.');
+          break;
         }
 
-        emptyPagesInRow = 0;
+        try {
+          const products = await this.retry(() => this.parsePage(page, pageNum));
+          if (!products.length) {
+            emptyPagesInRow++;
+            this.logger.log(`Пустая страница ${pageNum} (${emptyPagesInRow} подряд)`);
 
-        const valid = this.filterValid(products);
-        await this.saveToDatabase(valid);
+            if (emptyPagesInRow >= maxEmptyPages) {
+              this.logger.warn(
+                `Обнаружено ${maxEmptyPages} пустых страниц подряд. Парсинг остановлен.`,
+              );
+              break;
+            }
+            continue;
+          }
 
-        this.logger.log(`✅ Страница ${pageNum}: сохранено ${valid.length} товаров`);
-      } catch (error) {
-        this.logger.error(`Ошибка при парсинге страницы ${pageNum}: ${error.message}`);
+          emptyPagesInRow = 0;
+
+          const valid = this.filterValid(products);
+          await this.saveToDatabase(valid);
+
+          this.logger.log(`✅ Страница ${pageNum}: сохранено ${valid.length} товаров`);
+        } catch (error) {
+          this.logger.error(`Ошибка при парсинге страницы ${pageNum}: ${error.message}`);
+        }
       }
+    } finally {
+      this.isRunning = false;
+      await browser.close();
     }
-
-    await browser.close();
   }
 
-  async saveToDatabase(products: Product[]): Promise<void> {
-    await this.saveProducts.saveMany(products);
+  cancelParsing(): void {
+    if (!this.isRunning) {
+      this.logger.warn('Парсер не запущен — отменять нечего.');
+      return;
+    }
+    this.cancelRequested = true;
+    this.logger.warn('Отмена парсинга запрошена.');
   }
 
-  // Экспорт в Excel — делегируем ExportExcelProductsService
+  private async saveToDatabase(products: Product[]): Promise<void> {
+    try {
+      await this.saveProducts.saveMany(products);
+    } catch (err) {
+      this.logger.error(`❌ Ошибка при сохранении данных: ${err.message}`);
+    }
+  }
+
   async exportToExcelFromDb(
-    provider = this.provider,
+    provider = this.PROVIDER,
     fileName = `${provider}.xlsx`,
   ): Promise<void> {
     await this.exportService.exportToExcelFromDb(fileName, provider);
+  }
+
+  async getExcelStream(provider: string): Promise<fs.ReadStream> {
+    return getExcelStreamFromDb(this.exportToExcelFromDb.bind(this), provider);
   }
 }

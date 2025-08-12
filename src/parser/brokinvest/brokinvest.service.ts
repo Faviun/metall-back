@@ -1,15 +1,22 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
 import axios from 'axios';
+import * as fs from 'fs';
 import { ExportExcelProductsService } from 'src/database/export-excel.service';
 import { SaveProductsService } from 'src/database/save-products.service';
 import { Product } from 'src/types/product.type';
+import { getExcelStreamFromDb } from 'src/utils/excel.helper';
+import { allCategories } from 'src/utils/categories';
+import { nameUnific } from 'src/utils/name-unific';
 
 @Injectable()
 export class BrokinvestParserService {
   private readonly logger = new Logger(BrokinvestParserService.name);
   private readonly BASE_URL = 'https://back.brokinvest.ru/api/v1/catalog/export/items';
-  private readonly provider = 'brokinvest';
+  private readonly PROVIDER = 'brokinvest';
+  private readonly categories = allCategories;
+
+  private isRunning = false;
+  private cancelRequested = false;
 
   constructor(
     private readonly saveProducts: SaveProductsService,
@@ -29,11 +36,20 @@ export class BrokinvestParserService {
   //     }
   //   }
 
+  /** Запуск парсера */
   async fetchAllProducts(): Promise<void> {
+    if (this.isRunning) {
+      this.logger.warn('⚠️ Парсер уже запущен, новый запуск невозможен.');
+      return;
+    }
+
+    this.isRunning = true;
+    this.cancelRequested = false;
+
     let pageNum = 1;
     let totalSaved = 0;
 
-    while (true) {
+    while (!this.cancelRequested) {
       try {
         const raw = await this.fetchCategoryProducts(pageNum);
 
@@ -42,29 +58,41 @@ export class BrokinvestParserService {
           break;
         }
 
-        const products = this.mapProducts(raw)
-          // ✅ фильтруем товары без цены или категорий
-          .filter(
-            (p) =>
-              p.price1 && !isNaN(Number(p.price1)) && Number(p.price1) > 0 && p.category !== '',
-          );
+        const products = this.mapProducts(raw).filter(
+          (p) => p.price1 && !isNaN(Number(p.price1)) && Number(p.price1) > 0 && p.category !== '',
+        );
 
-        if (products.length === 0) {
-          this.logger.warn(`⚠️ Страница ${pageNum} — все товары без цены или категории.`);
-        } else {
+        if (products.length > 0) {
           await this.saveToDatabase(products);
           this.logger.log(`✅ Сохранено: ${products.length} шт. со страницы №: ${pageNum}`);
           totalSaved += products.length;
+        } else {
+          this.logger.warn(`⚠️ Страница ${pageNum} — все товары без цены или категории.`);
         }
 
         pageNum++;
       } catch (error) {
         this.logger.error(`❌ Ошибка парсинга страницы ${pageNum}: ${error.message}`);
-        break; // можно продолжать или выйти — зависит от задачи
+        break;
       }
     }
 
     this.logger.log(`🏁 Всего сохранено товаров: ${totalSaved}`);
+    this.isRunning = false;
+
+    if (this.cancelRequested) {
+      this.logger.warn('⛔ Парсер был отменён пользователем.');
+    }
+  }
+
+  /** Метод для запроса отмены парсера */
+  cancelParsing(): void {
+    if (!this.isRunning) {
+      this.logger.warn('Парсер не запущен — отменять нечего.');
+      return;
+    }
+    this.cancelRequested = true;
+    this.logger.warn('Отмена парсинга запрошена.');
   }
 
   private async fetchCategoryProducts(pageNum: number): Promise<any[]> {
@@ -78,6 +106,8 @@ export class BrokinvestParserService {
   private mapProducts(products: any[]): Product[] {
     return products.map((p) => {
       const name = p.title || '';
+      const uName = nameUnific(name);
+      const foundCategory = this.categories.find((cat) => name.includes(cat)) || 'Другое';
       const mark = p.gost || '';
       const price1 = p.price || null;
       const location = String(p.stockId) || ''; // 5 - СК Октябрьский 24 - Воронеж
@@ -85,10 +115,26 @@ export class BrokinvestParserService {
       const today = new Date().toISOString().split('T')[0];
       const uniqueString = name + mark + price1 + today;
 
+      this.logger.debug(
+        uName.name +
+          ' - ' +
+          uName.size +
+          ' - ' +
+          uName.length +
+          ' - ' +
+          uName.gost +
+          ' - ' +
+          uName.raw +
+          ' - ' +
+          p.title,
+      );
+
       return {
-        provider: this.provider,
-        category: p.admin_sub_categories?.[0]?.title || '',
-        name,
+        provider: this.PROVIDER,
+        // category: p.admin_sub_categories?.[0]?.title || '',
+        category: foundCategory,
+        // name: uName.name || name,
+        name: uName.raw || name,
         size: p.size || '',
         mark,
         weight: String(p.width),
@@ -99,7 +145,7 @@ export class BrokinvestParserService {
           ? `https://back.brokinvest.ru/api/v1/files/${p.files?.[0]?.file}`
           : '',
         link: p.staticPath ? `https://www.brokinvest.ru/product/${p.staticPath}` : '',
-        description: '',
+        description: name || '',
         length: String(p.height),
         price2: null,
         units2: '',
@@ -119,7 +165,14 @@ export class BrokinvestParserService {
     }
   }
 
-  async exportToExcelFromDb(fileName = 'ktzholding.xlsx', provider = this.provider): Promise<void> {
+  async exportToExcelFromDb(
+    provider = this.PROVIDER,
+    fileName = `${provider}.xlsx`,
+  ): Promise<void> {
     await this.exportService.exportToExcelFromDb(fileName, provider);
+  }
+
+  async getExcelStream(provider: string): Promise<fs.ReadStream> {
+    return getExcelStreamFromDb(this.exportToExcelFromDb.bind(this), provider);
   }
 }
