@@ -12,8 +12,7 @@ import { BrokinvestParserModule } from './parser/brokinvest/brokinvest.module';
 import { GetProductsService } from './database/get-products.service';
 import { DeleteProductsService } from './database/delete-products.service';
 import { ExportExcelProductsService } from './database/export-excel.service';
-import { EvrazModule } from './parser/evraz/evraz.module';
-
+import { DemidovParserModule } from './parser/demidov/demidov.module';
 @Module({
   imports: [
     McParserModule,
@@ -23,7 +22,7 @@ import { EvrazModule } from './parser/evraz/evraz.module';
     PrismaModule,
     DiposParserModule,
     BrokinvestParserModule,
-    EvrazModule,
+    DemidovParserModule,
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController],

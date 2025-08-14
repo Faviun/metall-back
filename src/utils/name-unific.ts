@@ -8,7 +8,7 @@ type ParsedProduct = {
 };
 
 export function nameUnific(fullName: string): ParsedProduct {
-  const raw = fullName.replace(/[×х*]/gi, '*').replace(/\s+/g, ' ').trim();
+  const raw = fullName.replace(/[x]/gi, '*').replace(/\s+/g, ' ').trim();
 
   const sizeMatch = raw.match(/\d{1,4}x\d{2,5}x\d{2,5}/);
   const size = sizeMatch ? sizeMatch[0] : undefined;
